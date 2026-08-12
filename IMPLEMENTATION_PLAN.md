@@ -2,14 +2,16 @@
 
 **Living document.** Updated as phases complete. Last updated: 2026-08-12.
 
-Current status: **Phase 0 complete. Phase 1 (shell & persistence) is next.**
+Current status: **Phases 0–1 complete. Phase 2 (creation wizard + custom content) is next.**
 
 | Phase | State |
 |---|---|
-| 0 — Rules foundation | ✅ complete — 89 tests, clean typecheck |
-| 1 — Shell & persistence | ⬜ next |
-| 2 — Creation wizard + custom content | ⬜ |
+| 0 — Rules foundation | ✅ complete |
+| 1 — Shell & persistence | ✅ complete |
+| 2 — Creation wizard + custom content | ⬜ next |
 | 3–9 | ⬜ |
+
+177 tests passing; typecheck and production build clean.
 
 ## 1. Deviations from the suggested build order
 
@@ -44,13 +46,23 @@ Each phase ends in a working, committed, demonstrable app.
 a number — caught by boundary validation on the first run, which is precisely the class of bug
 that would otherwise have surfaced as a broken equipment step in Phase 2.
 
-### Phase 1 — Shell & persistence
-- Routing, app shell, error boundaries, loading/empty states.
-- Dexie schema + repositories + migration runner + pre-migration auto-export.
-- Character gallery: create, duplicate, archive, delete-with-confirm, fast switching.
-- Full JSON export/import (character + custom content + assets).
-- `HttpRulesSource` + `CompositeRulesSource` behind config.
-- **Exit:** characters persist across reloads; a character round-trips through export/import intact.
+### Phase 1 — Shell & persistence ✅
+- ✅ Routing, app shell, error boundaries, loading/empty states.
+- ✅ Dexie schema + repositories with soft delete, cascade, and child re-keying on duplicate.
+- ✅ Character gallery: duplicate, archive, delete-with-confirm, fast switching.
+- ✅ Full JSON export/import (character + custom content + assets inlined as data URLs).
+- ✅ `HttpRulesSource` + `CompositeRulesSource`.
+- ✅ Tailwind + token layer, character moods, CI-enforced contrast.
+- **Exit met:** characters persist across reloads and round-trip through export/import intact.
+
+*Deferred:* the migration runner and pre-migration auto-export land with the first schema
+change — there is nothing to migrate from at `schemaVersion: 1`, and writing a runner with no
+migration to run would be untested scaffolding.
+
+**Found while building:** the contrast gate failed on its first run because the `border` token
+conflated two things WCAG treats differently — decorative hairlines (exempt) and boundaries that
+identify a control (3:1 required). Split into `border` / `border-strong` rather than lowering the
+threshold, which would have shipped invisible form fields.
 
 ### Phase 2 — Creation wizard + custom content
 - Nine steps per the brief; resumable draft; non-destructive back-navigation via `ChoiceRecord`.
