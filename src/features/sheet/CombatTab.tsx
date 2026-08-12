@@ -4,6 +4,9 @@ import { useCollection } from '../../rules/RulesProvider';
 import { Panel, Button } from '../../ui/primitives';
 import { formatModifier } from '../../engine/contributions';
 import { averageHitDieValue } from '../../engine/core';
+import { restorePools } from '../../engine/classResources';
+import { restoreSlots } from '../../engine/spellcasting';
+import { ResourcesPanel } from './ResourcesPanel';
 import type { ContentRef } from '../../domain/types';
 
 /**
@@ -13,7 +16,7 @@ import type { ContentRef } from '../../domain/types';
  * Bar instead, because they are needed from every tab.
  */
 export function CombatTab() {
-  const { character, stats, update } = useSheet();
+  const { character, stats, pools, update } = useSheet();
   const conditionsQuery = useCollection('conditions');
   const [restMessage, setRestMessage] = useState<string | null>(null);
 
@@ -52,12 +55,17 @@ export function CombatTab() {
    */
   async function shortRest() {
     if (!character) return;
-    const usages = { ...character.resources.usages };
-    for (const [key, pool] of Object.entries(usages)) {
-      if (pool.resetOn === 'short') usages[key] = { ...pool, used: 0 };
-    }
-    await update({ resources: { ...character.resources, usages } });
-    setRestMessage('Short rest taken. Short-rest features restored. Spend hit dice above to heal.');
+    await update({
+      resources: {
+        ...character.resources,
+        usages: restorePools(character.resources.usages, pools, 'short'),
+        // Only Pact Magic returns on a short rest; ordinary slots do not.
+        spellSlots: restoreSlots(character.resources.spellSlots, 'short'),
+      },
+    });
+    setRestMessage(
+      'Short rest taken. Short-rest features and Pact Magic slots restored. Spend hit dice above to heal.',
+    );
   }
 
   /**
@@ -66,16 +74,6 @@ export function CombatTab() {
    */
   async function longRest() {
     if (!character || !stats) return;
-    const usages = { ...character.resources.usages };
-    for (const [key, pool] of Object.entries(usages)) usages[key] = { ...pool, used: 0 };
-
-    const slots = { ...character.resources.spellSlots };
-    for (const level of Object.keys(slots)) {
-      const n = Number(level);
-      const slot = slots[n];
-      if (slot) slots[n] = { ...slot, used: 0 };
-    }
-
     await update({
       resources: {
         ...character.resources,
@@ -83,8 +81,8 @@ export function CombatTab() {
         tempHp: 0,
         deathSaves: { successes: 0, failures: 0 },
         exhaustion: Math.max(0, character.resources.exhaustion - 1),
-        usages,
-        spellSlots: slots,
+        usages: restorePools(character.resources.usages, pools, 'long'),
+        spellSlots: restoreSlots(character.resources.spellSlots, 'long'),
         concentratingOn: null,
       },
       classes: character.classes.map((c) => ({
@@ -133,6 +131,8 @@ export function CombatTab() {
           </p>
         ) : null}
       </Panel>
+
+      <ResourcesPanel />
 
       <Panel className="p-4">
         <h2 className="display-face mb-2 font-semibold">Hit dice</h2>

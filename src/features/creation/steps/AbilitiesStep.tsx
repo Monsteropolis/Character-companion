@@ -44,8 +44,9 @@ export function AbilitiesStep() {
         description="Racial bonuses are applied on top of these, and shown in the review step."
       />
 
-      <Field label="Method">
+      <Field label="Method" htmlFor="ability-method">
         <Select
+          id="ability-method"
           value={abilityMethod}
           onChange={(e) => setAbilityMethod(e.target.value as AbilityScoreMethod)}
         >

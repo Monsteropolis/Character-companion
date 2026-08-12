@@ -40,7 +40,8 @@ export function CharacterShell() {
     return <ErrorNotice message={sheet.error ?? 'Character not found.'} onRetry={sheet.reload} />;
   }
 
-  const isCaster = (sheet.character.spellcasting?.entries.length ?? 0) > 0;
+  // Driven by the class's own spellcasting, so a caster sees the tab before choosing any spell.
+  const isCaster = sheet.spellcasting?.hasSpellcasting ?? false;
   const tabs = TABS.filter((t) => !('castersOnly' in t && t.castersOnly) || isCaster);
 
   return (

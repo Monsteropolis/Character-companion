@@ -54,8 +54,12 @@ export function ClassStep() {
 
       {selected ? (
         <>
-          <Field label="Starting level" hint="Most campaigns begin at level 1.">
-            <Select value={level} onChange={(e) => setLevel(Number(e.target.value))}>
+          <Field label="Starting level" htmlFor="starting-level" hint="Most campaigns begin at level 1.">
+            <Select
+              id="starting-level"
+              value={level}
+              onChange={(e) => setLevel(Number(e.target.value))}
+            >
               {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>
                   Level {n}

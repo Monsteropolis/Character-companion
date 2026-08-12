@@ -2,7 +2,7 @@
 
 **Living document.** Updated as phases complete. Last updated: 2026-08-12.
 
-Current status: **Phases 0–4 complete. Phase 5 (abilities & spellcasting) is next.**
+Current status: **Phases 0–5 complete. Phase 6 (journal & notes) is next.**
 
 | Phase | State |
 |---|---|
@@ -11,11 +11,12 @@ Current status: **Phases 0–4 complete. Phase 5 (abilities & spellcasting) is n
 | 2 — Creation wizard + custom content | ✅ complete |
 | 3 — Dashboard | ✅ complete |
 | 4 — Inventory & equipment | ✅ complete |
-| 5 — Abilities & spellcasting | ⬜ next |
-| 6–9 | ⬜ |
+| 5 — Abilities & spellcasting | ✅ complete |
+| 6 — Journal & notes | ⬜ next |
+| 7–9 | ⬜ |
 
-402 tests passing; typecheck and production build clean. Creation, the dashboard
-and inventory all verified end-to-end in a real browser.
+465 tests passing; typecheck and production build clean. Every phase so far
+verified end-to-end in a real browser.
 
 ## 1. Deviations from the suggested build order
 
@@ -130,11 +131,32 @@ back in the largest sensible coins, with a regression test. Separately, `Confirm
 under jsdom because `showModal` is unimplemented there; it now falls back to the `open`
 attribute, which also covers older browsers.
 
-### Phase 5 — Abilities & spellcasting
-- Spellbook: cantrips + levels 1–9, known/prepared/spellbook modes, rituals, concentration.
-- Slots with use/restore; upcasting via `damage_at_slot_level`; save DC and attack bonus.
-- Filter and search across school, level, class, casting time, concentration, ritual.
-- **Exit:** a level-5 Wizard and a Cleric both prepare and cast correctly; slots restore on rest.
+### Phase 5 — Abilities & spellcasting ✅
+- ✅ Spellbook: cantrips and levels 1–9, known/prepared/spellbook modes, rituals, concentration
+  tracking, search and filters by level and school.
+- ✅ Slots with use/undo; upcasting offered explicitly with the damage each slot produces, read
+  from `damage_at_slot_level` / `heal_at_slot_level`.
+- ✅ Warlock **Pact Magic** kept as a separate pool that recovers on a short rest, stored under an
+  offset key so a Warlock/Wizard's level-2 slots cannot merge.
+- ✅ Multiclass slots from a combined caster level — half-casters rounded down individually,
+  Warlock excluded — resolved against the full-caster table rather than a hardcoded one.
+- ✅ Preparation limits per class; classes that know a fixed list are offered none.
+- **Exit met:** a level-5 Wizard, Warlock and Paladin each show correct slots, DC and attack.
+
+**Also on request — every class, not just casters.** `deriveClassResources` reads the level
+table's `class_specific` block to produce trackable pools and reference values for all twelve
+classes: Rage, Ki, Second Wind, Action Surge, Indomitable, Channel Divinity, Bardic Inspiration,
+Sorcery Points, Wild Shape, Mystic Arcanum, Arcane Recovery, plus Sneak Attack dice, Martial Arts
+die, Extra Attack, rage damage and the rest. Pools recover on the correct rest; values that are
+not spent (Sneak Attack is once per turn) are shown as reference rather than given a tracker.
+Four pools the dataset omits — Lay on Hands, Second Wind, Bardic Inspiration uses, Wild Shape —
+are published formulas encoded with their reasoning.
+
+**Found while building:** the dataset uses `rage_count: 9999` as an "unlimited" sentinel at level
+20, handled explicitly. Clicking a resource before its usage record synced was silently
+swallowed, now falling back to the pool definition. The browser pass caught three form controls
+with no accessible name (starting level, ability-score method, personality suggestions), now
+labelled.
 
 ### Phase 6 — Journal & notes
 - Rich text; **public/private required at creation**, visually unmistakable.

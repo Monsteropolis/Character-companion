@@ -9,6 +9,7 @@ import { OverviewTab } from '../features/sheet/OverviewTab';
 import { CombatTab } from '../features/sheet/CombatTab';
 import { AbilitiesTab } from '../features/sheet/AbilitiesTab';
 import { InventoryTab } from '../features/inventory/InventoryTab';
+import { SpellsTab } from '../features/spells/SpellsTab';
 
 /**
  * Route table.
@@ -52,7 +53,7 @@ export const router = createBrowserRouter([
           { path: 'overview', element: <OverviewTab /> },
           { path: 'combat', element: <CombatTab /> },
           { path: 'abilities', element: <AbilitiesTab /> },
-          { path: 'spells', element: <Placeholder title="Spells" phase="Phase 5" /> },
+          { path: 'spells', element: <SpellsTab /> },
           { path: 'inventory', element: <InventoryTab /> },
           { path: 'journal', element: <Placeholder title="Journal" phase="Phase 6" /> },
           { path: 'notes', element: <Placeholder title="Notes" phase="Phase 6" /> },

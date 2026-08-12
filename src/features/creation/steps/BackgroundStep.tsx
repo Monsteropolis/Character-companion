@@ -134,9 +134,10 @@ function SuggestionField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const id = `suggestion-${label.toLowerCase().replace(/\s+/g, '-')}`;
   return (
-    <Field label={label}>
-      <TextArea value={value} onChange={(e) => onChange(e.target.value)} rows={2} />
+    <Field label={label} htmlFor={id}>
+      <TextArea id={id} value={value} onChange={(e) => onChange(e.target.value)} rows={2} />
       {suggestions.length > 0 ? (
         <details className="mt-1">
           <summary className="cursor-pointer text-xs text-[var(--text-muted)]">

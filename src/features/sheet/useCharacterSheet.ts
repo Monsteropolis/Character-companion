@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCollections } from '../../rules/RulesProvider';
 import { characters as characterRepo, inventory as inventoryRepo } from '../../persistence/repositories';
 import { deriveCharacter, emptyResolvedRules, type ResolvedRules, type DerivedStats } from '../../engine/derive';
+import { deriveClassResources, type ClassLevelRow, type ResourcePool, type ClassStat } from '../../engine/classResources';
+import { deriveSpellcasting, type LevelSlotRow, type SpellcastingSnapshot } from '../../engine/spellcasting';
 import type { AbilityId } from '../../rules/schemas/primitives';
 import type { Character, InventoryItem } from '../../domain/types';
 
@@ -18,6 +20,11 @@ export interface CharacterSheet {
   items: InventoryItem[];
   stats: DerivedStats | null;
   features: { index: string; name: string; desc: string[]; source: string }[];
+  /** Trackable class pools -- rage, ki, second wind -- for casters and non-casters alike. */
+  pools: ResourcePool[];
+  /** Level-scaled reference values such as Sneak Attack dice or Extra Attack. */
+  classStats: ClassStat[];
+  spellcasting: SpellcastingSnapshot | null;
   loading: boolean;
   error: string | null;
   update: (patch: Partial<Character>) => Promise<void>;
@@ -96,10 +103,14 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
     setItems((current) => current.filter((i) => i.id !== id));
   }, []);
 
-  const { rules, features } = useMemo(() => {
+  const { rules, features, levelRows } = useMemo(() => {
     const data = rulesQuery.data;
     if (!data || !character) {
-      return { rules: emptyResolvedRules(), features: [] as CharacterSheet['features'] };
+      return {
+        rules: emptyResolvedRules(),
+        features: [] as CharacterSheet['features'],
+        levelRows: [] as (typeof rulesQuery.data extends undefined ? never : any)[],
+      };
     }
 
     const race = data.races.find((r) => r.index === character.race.raceRef?.index);
@@ -177,7 +188,11 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
       featureNames,
     };
 
-    return { rules: resolved, features: featureList };
+    // Class progression rows only: rows carrying a `subclass` field are subclass progression
+    // yet still report the parent class, which would double-count levels.
+    const classRows = data.levels.filter((l) => !l.subclass);
+
+    return { rules: resolved, features: featureList, levelRows: classRows };
   }, [rulesQuery.data, character]);
 
   const stats = useMemo(
@@ -185,11 +200,56 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
     [character, rules, items],
   );
 
+  const { pools, classStats } = useMemo(() => {
+    if (!character || !stats) return { pools: [] as ResourcePool[], classStats: [] as ClassStat[] };
+    const rows: ClassLevelRow[] = levelRows.map((l: any) => ({
+      classIndex: l.class.index,
+      level: l.level,
+      classSpecific: l.class_specific,
+    }));
+    const derived = deriveClassResources(character, rows, stats.abilityModifiers);
+    return { pools: derived.pools, classStats: derived.stats };
+  }, [character, stats, levelRows]);
+
+  const spellcasting = useMemo(() => {
+    if (!character || !stats || !rulesQuery.data) return null;
+    const rows: LevelSlotRow[] = levelRows.map((l: any) => {
+      const slots: Record<number, number> = {};
+      const sc = l.spellcasting ?? {};
+      for (let level = 1; level <= 9; level++) {
+        const value = sc[`spell_slots_level_${level}`];
+        if (typeof value === 'number' && value > 0) slots[level] = value;
+      }
+      return {
+        classIndex: l.class.index,
+        level: l.level,
+        slots,
+        cantripsKnown: sc.cantrips_known ?? 0,
+        spellsKnown: sc.spells_known ?? null,
+      };
+    });
+
+    const classNames = Object.fromEntries(
+      rulesQuery.data.classes.map((c) => [c.index, c.name]),
+    );
+
+    return deriveSpellcasting(
+      character,
+      rows,
+      stats.abilityModifiers,
+      rules.spellcastingAbilityByClass,
+      classNames,
+    );
+  }, [character, stats, levelRows, rules, rulesQuery.data]);
+
   return {
     character,
     items,
     stats,
     features,
+    pools,
+    classStats,
+    spellcasting,
     loading: loading || rulesQuery.isLoading,
     error,
     update,
