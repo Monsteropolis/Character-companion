@@ -3,7 +3,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { customContent as repo } from '../../persistence/repositories';
 import { Button, Panel, EmptyState, Spinner, SourceBadge } from '../../ui/primitives';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
-import { StepHeading, Field, TextInput, TextArea, Select } from '../creation/steps/parts';
+import { Field, Select } from '../creation/steps/parts';
+import { HomebrewFormFields } from './HomebrewForm';
+import { emptyForm, type HomebrewForm as FormState } from './payloads';
+import { useCollections } from '../../rules/RulesProvider';
 import {
   CUSTOM_KINDS,
   homebrewEntrySchema,
@@ -11,7 +14,6 @@ import {
   toPack,
   parsePack,
   descriptionOf,
-  type HomebrewEntry,
 } from './homebrewSchema';
 import type { CustomContent, CustomContentKind } from '../../domain/types';
 
@@ -24,8 +26,11 @@ import type { CustomContent, CustomContentKind } from '../../domain/types';
 export function CustomContentPage() {
   const queryClient = useQueryClient();
   const [content, setContent] = useState<CustomContent[] | null>(null);
-  const [editing, setEditing] = useState<HomebrewEntry | null>(null);
+  const [editingKind, setEditingKind] = useState<CustomContentKind | null>(null);
+  const [editing, setEditing] = useState<FormState | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Parent-class and parent-race pickers need the official lists to link against.
+  const { data: rules } = useCollections(['classes', 'races']);
   const [pendingDelete, setPendingDelete] = useState<CustomContent | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +46,13 @@ export function CustomContentPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleSave(entry: HomebrewEntry) {
-    const parsed = homebrewEntrySchema.safeParse(entry);
+  async function handleSave(form: FormState, kind: CustomContentKind) {
+    const parsed = homebrewEntrySchema.safeParse({
+      kind,
+      name: form.name,
+      description: form.description,
+      form,
+    });
     if (!parsed.success) {
       setError(parsed.error.issues.map((i) => i.message).join('; '));
       return;
@@ -51,9 +61,10 @@ export function CustomContentPage() {
     // Editing keeps the original id so characters referencing it are not orphaned.
     await repo.save(editingId ? { ...record, id: editingId } : record);
     setEditing(null);
+    setEditingKind(null);
     setEditingId(null);
     setError(null);
-    setMessage(`Saved "${entry.name}".`);
+    setMessage(`Saved "${form.name}".`);
     await refresh();
   }
 
@@ -124,14 +135,8 @@ export function CustomContentPage() {
             variant="primary"
             onClick={() => {
               setEditingId(null);
-              setEditing({
-                kind: 'background',
-                name: '',
-                description: '',
-                basedOn: null,
-                payload: {},
-                effects: [],
-              });
+              setEditingKind('background');
+              setEditing(emptyForm());
             }}
           >
             New
@@ -158,17 +163,40 @@ export function CustomContentPage() {
         </p>
       ) : null}
 
-      {editing ? (
-        <HomebrewForm
-          entry={editing}
-          onChange={setEditing}
-          onSave={() => void handleSave(editing)}
-          onCancel={() => {
-            setEditing(null);
-            setEditingId(null);
-            setError(null);
-          }}
-        />
+      {editing && editingKind ? (
+        <div className="mb-6">
+          <Field label="Type" htmlFor="hb-kind">
+            <Select
+              id="hb-kind"
+              value={editingKind}
+              onChange={(e) => setEditingKind(e.target.value as CustomContentKind)}
+            >
+              {CUSTOM_KINDS.map((k) => (
+                <option key={k.value} value={k.value}>
+                  {k.label}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              {CUSTOM_KINDS.find((k) => k.value === editingKind)?.hint}
+            </p>
+          </Field>
+
+          <HomebrewFormFields
+            kind={editingKind}
+            form={editing}
+            onChange={setEditing}
+            onSave={() => void handleSave(editing, editingKind)}
+            onCancel={() => {
+              setEditing(null);
+              setEditingKind(null);
+              setEditingId(null);
+              setError(null);
+            }}
+            classOptions={rules?.classes ?? []}
+            raceOptions={rules?.races ?? []}
+          />
+        </div>
       ) : null}
 
       {content.length === 0 && !editing ? (
@@ -200,13 +228,14 @@ export function CustomContentPage() {
                       type="button"
                       onClick={() => {
                         setEditingId(item.id);
+                        setEditingKind(item.kind);
+                        // Reload the authoring form so editing shows what was filled in, not
+                        // the generated rules document.
                         setEditing({
-                          kind: item.kind,
+                          ...emptyForm(),
+                          ...(item.form as Partial<FormState> | undefined),
                           name: item.name,
                           description: descriptionOf(item),
-                          basedOn: item.basedOn,
-                          payload: {},
-                          effects: [],
                         });
                       }}
                       className="min-h-11 rounded-md px-2 text-xs text-[var(--text-muted)] hover:bg-[var(--accent-subtle)]"
@@ -247,71 +276,5 @@ export function CustomContentPage() {
         onCancel={() => setPendingDelete(null)}
       />
     </div>
-  );
-}
-
-function HomebrewForm({
-  entry,
-  onChange,
-  onSave,
-  onCancel,
-}: {
-  entry: HomebrewEntry;
-  onChange: (entry: HomebrewEntry) => void;
-  onSave: () => void;
-  onCancel: () => void;
-}) {
-  const kind = CUSTOM_KINDS.find((k) => k.value === entry.kind);
-
-  return (
-    <Panel className="mb-6 p-4">
-      <StepHeading title="Homebrew entry" />
-
-      <Field label="Type" htmlFor="kind">
-        <Select
-          id="kind"
-          value={entry.kind}
-          onChange={(e) => onChange({ ...entry, kind: e.target.value as CustomContentKind })}
-        >
-          {CUSTOM_KINDS.map((k) => (
-            <option key={k.value} value={k.value}>
-              {k.label}
-            </option>
-          ))}
-        </Select>
-        {kind ? <p className="mt-1 text-xs text-[var(--text-muted)]">{kind.hint}</p> : null}
-      </Field>
-
-      <Field label="Name" htmlFor="hb-name">
-        <TextInput
-          id="hb-name"
-          value={entry.name}
-          onChange={(e) => onChange({ ...entry, name: e.target.value })}
-          placeholder="e.g. Soldier"
-        />
-      </Field>
-
-      <Field
-        label="Description"
-        htmlFor="hb-desc"
-        hint="What it does. Written out for reference at the table."
-      >
-        <TextArea
-          id="hb-desc"
-          value={entry.description}
-          onChange={(e) => onChange({ ...entry, description: e.target.value })}
-          rows={5}
-        />
-      </Field>
-
-      <div className="flex gap-2">
-        <Button variant="ghost" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button variant="primary" onClick={onSave} disabled={!entry.name.trim()}>
-          Save
-        </Button>
-      </div>
-    </Panel>
   );
 }

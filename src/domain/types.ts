@@ -83,7 +83,46 @@ export interface AbilityScoreBlock {
   racial: Record<AbilityId, number>;
   asi: Record<AbilityId, number>;
   misc: Record<AbilityId, number>;
+  /** Raw manual set, no label. The escape hatch of last resort; wins over everything. */
   override: Partial<Record<AbilityId, number>>;
+}
+
+/**
+ * A labelled change to an ability score.
+ *
+ * Scores move constantly in play -- a Belt of Giant Strength sets one permanently, Bear's
+ * Endurance raises one for an hour, a curse drops one until it is lifted. Modelling these as
+ * tracked, reversible entries rather than edits to the base score is what lets a player undo
+ * "the spell ended" without having to remember what the number used to be.
+ */
+export interface AbilityAdjustment {
+  id: string;
+  ability: AbilityId;
+  /** 'bonus' adds to the total; 'set' replaces it unless the score is already higher. */
+  kind: 'bonus' | 'set';
+  value: number;
+  /** Temporary adjustments are visually separated and cleared in a single action. */
+  duration: 'permanent' | 'temporary';
+  label: string;
+  note: string;
+  createdAt: number;
+}
+
+/**
+ * Manual overrides for derived statistics.
+ *
+ * DMs break rules constantly, and an app that insists on its own arithmetic gets abandoned.
+ * Every one of these is null by default, so an override is always a deliberate act and the
+ * sheet shows plainly when a number is no longer computed.
+ */
+export interface StatOverrides {
+  armorClass: number | null;
+  initiative: number | null;
+  speed: number | null;
+  proficiencyBonus: number | null;
+  passivePerception: number | null;
+  spellSaveDc: number | null;
+  spellAttackBonus: number | null;
 }
 
 export type RestType = 'short' | 'long' | 'none';
@@ -170,6 +209,10 @@ export interface Character extends Persisted {
   race: { raceRef: ContentRef | null; subraceRef: ContentRef | null };
   background: { ref: ContentRef | null; feature: { name: string; desc: string[] } | null };
   abilityScores: AbilityScoreBlock;
+  /** Labelled, reversible ability changes from play. See `AbilityAdjustment`. */
+  abilityAdjustments: AbilityAdjustment[];
+  /** Manual overrides for derived statistics. */
+  statOverrides: StatOverrides;
   proficiencies: ProficiencyGrant[];
   resources: ResourceState;
   spellcasting: SpellcastingState | null;
@@ -283,8 +326,16 @@ export interface CustomContent extends Persisted {
   name: string;
   /** null means from scratch; set means override/variant of existing content. */
   basedOn: ContentRef | null;
+  /** The rules document, shaped exactly like its SRD counterpart. */
   payload: unknown;
   effects: RuleEffect[];
+  /**
+   * The authoring form that produced `payload`.
+   *
+   * Kept so editing reloads the fields the author filled in, rather than making them
+   * reconstruct their entry from the generated document.
+   */
+  form?: unknown;
 }
 
 export interface StoredAsset extends Persisted {

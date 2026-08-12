@@ -4,6 +4,10 @@ import { AppShell } from './AppShell';
 import { Spinner } from '../ui/primitives';
 import { CharacterGallery } from '../features/characters/CharacterGallery';
 import { CreationWizard } from '../features/creation/CreationWizard';
+import { CharacterShell } from '../features/sheet/CharacterShell';
+import { OverviewTab } from '../features/sheet/OverviewTab';
+import { CombatTab } from '../features/sheet/CombatTab';
+import { AbilitiesTab } from '../features/sheet/AbilitiesTab';
 
 /**
  * Route table.
@@ -41,11 +45,12 @@ export const router = createBrowserRouter([
       { path: 'create', element: <CreationWizard /> },
       {
         path: 'c/:id',
+        element: <CharacterShell />,
         children: [
           { index: true, element: <Navigate to="overview" replace /> },
-          { path: 'overview', element: <Placeholder title="Overview" phase="Phase 3" /> },
-          { path: 'combat', element: <Placeholder title="Combat" phase="Phase 3" /> },
-          { path: 'abilities', element: <Placeholder title="Abilities" phase="Phase 5" /> },
+          { path: 'overview', element: <OverviewTab /> },
+          { path: 'combat', element: <CombatTab /> },
+          { path: 'abilities', element: <AbilitiesTab /> },
           { path: 'spells', element: <Placeholder title="Spells" phase="Phase 5" /> },
           { path: 'inventory', element: <Placeholder title="Inventory" phase="Phase 4" /> },
           { path: 'journal', element: <Placeholder title="Journal" phase="Phase 6" /> },

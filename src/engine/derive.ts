@@ -96,6 +96,10 @@ export interface DerivedStats {
   unmodelledEffects: string[];
   /** Active exhaustion effects, cumulative by level. */
   exhaustionEffects: string[];
+  /** Temporary ability adjustments currently in force, for the "in effect now" banner. */
+  activeTemporaryAdjustments: number;
+  /** Which derived stats are currently overridden, so the UI can mark them. */
+  overriddenStats: string[];
 }
 
 /**
@@ -112,7 +116,9 @@ export function deriveCharacter(
   rules: ResolvedRules,
   items: InventoryItem[],
 ): DerivedStats {
-  const scores = totalAbilityScores(character.abilityScores);
+  const adjustments = character.abilityAdjustments ?? [];
+  const overrides = character.statOverrides;
+  const scores = totalAbilityScores(character.abilityScores, adjustments);
   const mods = {
     str: abilityModifier(scores.str),
     dex: abilityModifier(scores.dex),
@@ -123,7 +129,7 @@ export function deriveCharacter(
   } satisfies Record<AbilityId, number>;
 
   const totalLevel = character.classes.reduce((sum, c) => sum + c.level, 0) || 1;
-  const profBonus = proficiencyBonus(totalLevel);
+  const profBonus = overrides?.proficiencyBonus ?? proficiencyBonus(totalLevel);
 
   const equipped = items.filter((i) => i.equipped && i.deletedAt === null);
   const effects = collectEffects(character, rules, equipped);
@@ -191,14 +197,19 @@ export function deriveCharacter(
   });
 
   // --- Armour class --------------------------------------------------------
-  const armorClass = computeArmorClass(mods, effects, equipped);
+  // A manual override replaces the computed total but keeps the breakdown visible, so the
+  // player can still see what the rules would have produced.
+  const armorClass = withOverride(
+    computeArmorClass(mods, effects, equipped),
+    overrides?.armorClass ?? null,
+  );
 
   // --- Initiative ----------------------------------------------------------
   const initiativeParts: Contribution[] = [contribution('DEX modifier', mods.dex, 'ability')];
   for (const e of effects) {
     if (e.t === 'initiative-bonus') initiativeParts.push(contribution('Feature', e.value, 'feature'));
   }
-  const initiative = derive(initiativeParts);
+  const initiative = withOverride(derive(initiativeParts), overrides?.initiative ?? null);
 
   // --- Speed ---------------------------------------------------------------
   const speedParts: Contribution[] = [contribution('Base speed', rules.raceSpeed, 'base')];
@@ -228,7 +239,7 @@ export function deriveCharacter(
     speedParts.push(contribution('Exhaustion', 0, 'override'));
     speedNotes.push('Speed reduced to 0 by exhaustion');
   }
-  const speed = derive(speedParts, { notes: speedNotes });
+  const speed = withOverride(derive(speedParts, { notes: speedNotes }), overrides?.speed ?? null);
 
   // --- Hit points ----------------------------------------------------------
   const maxHp = computeMaxHp(character, rules, mods.con, effects, totalLevel);
@@ -257,8 +268,9 @@ export function deriveCharacter(
   for (const entry of character.spellcasting?.entries ?? []) {
     const ability = entry.ability ?? rules.spellcastingAbilityByClass[entry.classRef.index];
     if (!ability) continue;
-    saveDc[entry.classRef.index] = spellSaveDc(profBonus, mods[ability]);
-    attackBonus[entry.classRef.index] = spellAttackBonus(profBonus, mods[ability]);
+    saveDc[entry.classRef.index] = overrides?.spellSaveDc ?? spellSaveDc(profBonus, mods[ability]);
+    attackBonus[entry.classRef.index] =
+      overrides?.spellAttackBonus ?? spellAttackBonus(profBonus, mods[ability]);
   }
 
   // --- Carrying ------------------------------------------------------------
@@ -298,7 +310,7 @@ export function deriveCharacter(
     speed,
     maxHp,
     hitDice,
-    passivePerception: passiveFor('perception', 'wis'),
+    passivePerception: overrides?.passivePerception ?? passiveFor('perception', 'wis'),
     passiveInvestigation: passiveFor('investigation', 'int'),
     passiveInsight: passiveFor('insight', 'wis'),
     spellSaveDc: saveDc,
@@ -309,6 +321,30 @@ export function deriveCharacter(
     attacks,
     unmodelledEffects: [...new Set(unmodelled)],
     exhaustionEffects: activeExhaustionEffects,
+    activeTemporaryAdjustments: adjustments.filter((a) => a.duration === 'temporary').length,
+    overriddenStats: Object.entries(overrides ?? {})
+      .filter(([, v]) => v !== null && v !== undefined)
+      .map(([k]) => k),
+  };
+}
+
+/**
+ * Applies a manual override to a derived value.
+ *
+ * The computed contributions are retained rather than discarded: a player who overrode their AC
+ * three sessions ago needs to be able to see both the override and what the rules say, or they
+ * will never work out why the number stopped moving when they changed armour.
+ */
+function withOverride(value: DerivedValue, override: number | null): DerivedValue {
+  if (override === null) return value;
+  return {
+    ...value,
+    total: override,
+    contributions: [
+      ...value.contributions,
+      contribution('Manual override', override, 'override'),
+    ],
+    notes: [...value.notes, 'This value is overridden and no longer updates automatically.'],
   };
 }
 
@@ -439,7 +475,9 @@ function computeMaxHp(
   totalLevel: number,
 ): DerivedValue {
   if (character.resources.maxHpOverride !== null) {
-    return derive([contribution('Manual maximum', character.resources.maxHpOverride, 'override')]);
+    return derive([contribution('Manual maximum', character.resources.maxHpOverride, 'override')], {
+      notes: ['Hit point maximum is set manually and no longer updates automatically.'],
+    });
   }
 
   const parts: Contribution[] = [];

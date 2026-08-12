@@ -1,5 +1,5 @@
 import type { AbilityId } from '../rules/schemas/primitives';
-import type { AbilityScoreBlock, AbilityScoreMethod } from '../domain/types';
+import type { AbilityAdjustment, AbilityScoreBlock, AbilityScoreMethod } from '../domain/types';
 import { ABILITY_IDS, clampScore } from './core';
 
 /**
@@ -111,24 +111,77 @@ export function rollAbilityScoreSet(random: () => number = Math.random): number[
 /**
  * Total score for one ability, applying every layer.
  *
- * An explicit override wins outright -- items like a Belt of Giant Strength set a score rather
- * than adding to it, and a DM may simply declare a value.
+ * Order is deliberate and follows the rules:
+ *  1. a raw manual override wins outright -- it is the DM hammer and nothing overrules it;
+ *  2. otherwise bonuses accumulate: base, racial, ASI, misc, and any 'bonus' adjustments;
+ *  3. 'set' adjustments then compete with that sum and the highest wins, because effects that
+ *     change a score to a fixed value ("your Strength becomes 21") explicitly do nothing when
+ *     the score is already equal or higher, and never stack with one another.
  */
-export function totalAbilityScore(block: AbilityScoreBlock, id: AbilityId): number {
+export function totalAbilityScore(
+  block: AbilityScoreBlock,
+  id: AbilityId,
+  adjustments: AbilityAdjustment[] = [],
+): number {
   const override = block.override[id];
   if (override !== undefined) return clampScore(override);
-  return clampScore(block.base[id] + block.racial[id] + block.asi[id] + block.misc[id]);
+
+  const forAbility = adjustments.filter((a) => a.ability === id);
+  const bonuses = forAbility
+    .filter((a) => a.kind === 'bonus')
+    .reduce((sum, a) => sum + a.value, 0);
+
+  const accumulated = block.base[id] + block.racial[id] + block.asi[id] + block.misc[id] + bonuses;
+
+  const sets = forAbility.filter((a) => a.kind === 'set').map((a) => a.value);
+  if (sets.length === 0) return clampScore(accumulated);
+
+  return clampScore(Math.max(accumulated, ...sets));
 }
 
-export function totalAbilityScores(block: AbilityScoreBlock): Record<AbilityId, number> {
+export function totalAbilityScores(
+  block: AbilityScoreBlock,
+  adjustments: AbilityAdjustment[] = [],
+): Record<AbilityId, number> {
   return {
-    str: totalAbilityScore(block, 'str'),
-    dex: totalAbilityScore(block, 'dex'),
-    con: totalAbilityScore(block, 'con'),
-    int: totalAbilityScore(block, 'int'),
-    wis: totalAbilityScore(block, 'wis'),
-    cha: totalAbilityScore(block, 'cha'),
+    str: totalAbilityScore(block, 'str', adjustments),
+    dex: totalAbilityScore(block, 'dex', adjustments),
+    con: totalAbilityScore(block, 'con', adjustments),
+    int: totalAbilityScore(block, 'int', adjustments),
+    wis: totalAbilityScore(block, 'wis', adjustments),
+    cha: totalAbilityScore(block, 'cha', adjustments),
   };
+}
+
+/** Explains how an ability reached its value, for the sheet's breakdown popover. */
+export function explainAbilityScore(
+  block: AbilityScoreBlock,
+  id: AbilityId,
+  adjustments: AbilityAdjustment[] = [],
+): { label: string; value: number; kind: 'base' | 'racial' | 'asi' | 'misc' | 'adjustment' | 'override' }[] {
+  const override = block.override[id];
+  if (override !== undefined) {
+    return [{ label: 'Manual override', value: override, kind: 'override' }];
+  }
+
+  const parts: ReturnType<typeof explainAbilityScore> = [
+    { label: 'Base score', value: block.base[id], kind: 'base' },
+  ];
+  if (block.racial[id]) parts.push({ label: 'Racial bonus', value: block.racial[id], kind: 'racial' });
+  if (block.asi[id]) parts.push({ label: 'Ability Score Improvements', value: block.asi[id], kind: 'asi' });
+  if (block.misc[id]) parts.push({ label: 'Other permanent', value: block.misc[id], kind: 'misc' });
+
+  for (const adjustment of adjustments.filter((a) => a.ability === id)) {
+    parts.push({
+      label: adjustment.kind === 'set'
+        ? `${adjustment.label} (sets to ${adjustment.value})`
+        : adjustment.label,
+      value: adjustment.value,
+      kind: 'adjustment',
+    });
+  }
+
+  return parts;
 }
 
 /** Starting scores for a method, so switching methods lands somewhere legal. */

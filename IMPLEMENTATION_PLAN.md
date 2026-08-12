@@ -2,18 +2,19 @@
 
 **Living document.** Updated as phases complete. Last updated: 2026-08-12.
 
-Current status: **Phases 0–2 complete. Phase 3 (character dashboard) is next.**
+Current status: **Phases 0–3 complete. Phase 4 (inventory & equipment) is next.**
 
 | Phase | State |
 |---|---|
 | 0 — Rules foundation | ✅ complete |
 | 1 — Shell & persistence | ✅ complete |
 | 2 — Creation wizard + custom content | ✅ complete |
-| 3 — Dashboard | ⬜ next |
-| 4–9 | ⬜ |
+| 3 — Dashboard | ✅ complete |
+| 4 — Inventory & equipment | ⬜ next |
+| 5–9 | ⬜ |
 
-277 tests passing; typecheck and production build clean. Creation verified
-end-to-end in a real browser.
+355 tests passing; typecheck and production build clean. Creation and the
+dashboard both verified end-to-end in a real browser.
 
 ## 1. Deviations from the suggested build order
 
@@ -82,13 +83,33 @@ because the review step needs real numbers. Phase 3 consumes them rather than re
 for spells-known counts (Wizards are the exception, whose spellbook size is not in the table at
 all and is computed explicitly).
 
-### Phase 3 — Dashboard
-- Play Bar (portrait, HP, AC, conditions, emote) persistent across tabs.
-- Identity panel with portrait as a major visual element; core stats; skills.
-- Combat: HP/temp HP/damage/heal, death saves, hit dice, conditions, exhaustion, short/long rest.
-- Attacks & actions cards; features & traits, searchable and collapsible.
-- Effects registry: level-1 mechanical features.
-- **Exit:** a full session is playable from the sheet; every derived stat shows its breakdown.
+### Phase 3 — Dashboard ✅
+- ✅ Play Bar persistent across tabs: portrait, HP with damage/heal/temp, AC, initiative, speed,
+  conditions. (Emote controls arrive with Phase 7.)
+- ✅ Overview: ability scores, saving throws, skills, passives — every value expandable to its
+  contributions.
+- ✅ Combat: death saves, hit dice, conditions from the real SRD list, exhaustion with its
+  cumulative effects, short and long rests, attack cards.
+- ✅ Abilities: features and traits, searchable, grouped by source, with unmodelled ones marked
+  "Manual" so the player knows what the sheet is not applying for them.
+- **Exit met:** a session is playable from the sheet; every derived stat shows its breakdown.
+
+**Added on request — ability adjustments and stat overrides.** Scores change constantly in play,
+so `AbilityAdjustment` records labelled, removable changes split into temporary and permanent.
+Bonuses stack; "set" effects (a Belt of Giant Strength) compete rather than stack and do nothing
+when the score is already higher. Separately, `StatOverrides` lets any derived value — AC,
+initiative, speed, proficiency bonus, passive Perception, spell DC and attack, max HP — be pinned
+manually; overridden values keep their computed breakdown visible and are marked on the sheet.
+
+**Also on request — homebrew now carries mechanics, not just prose.** Custom backgrounds grant
+real skill and tool proficiencies, a feature, languages and starting gold; races and subraces
+carry ability bonuses and speed; spells carry level, school, components and concentration. Every
+kind is generated through builders that emit documents validating against the *same* Zod schemas
+as SRD content, tested both fully-specified and near-empty.
+
+**Schema v2 and the migration runner.** These additions were the first real schema change, so the
+runner deferred in Phase 1 now exists with a migration to run: characters are upgraded on read,
+and a v1 save loads with its data intact.
 
 ### Phase 4 — Inventory & equipment
 - Categories, currency (cp/sp/ep/gp/pp), attunement (3-item cap warning), charges, custom items.

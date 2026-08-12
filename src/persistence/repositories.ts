@@ -1,5 +1,6 @@
 import { db } from './db';
 import { SCHEMA_VERSION, createCharacter, newId } from '../domain/factories';
+import { migrateCharacter } from './migrations';
 import type {
   Character,
   InventoryItem,
@@ -30,12 +31,14 @@ function isLive<T extends Persisted>(record: T): boolean {
 export const characters = {
   async list(): Promise<Character[]> {
     const all = await db().characters.toArray();
-    return all.filter(isLive).sort((a, b) => b.updatedAt - a.updatedAt);
+    // Migrated on read, so a character saved by an older build is upgraded the moment it loads
+    // and no consumer ever sees an outdated shape.
+    return all.filter(isLive).map(migrateCharacter).sort((a, b) => b.updatedAt - a.updatedAt);
   },
 
   async get(id: string): Promise<Character | null> {
     const found = await db().characters.get(id);
-    return found && isLive(found) ? found : null;
+    return found && isLive(found) ? migrateCharacter(found) : null;
   },
 
   async save(character: Character): Promise<Character> {

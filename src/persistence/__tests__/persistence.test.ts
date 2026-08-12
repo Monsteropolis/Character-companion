@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { CharacterCompanionDb, setDb, db } from '../db';
 import { characters, inventory, journal, notes } from '../repositories';
-import { createInventoryItem, createJournalEntry, createNote } from '../../domain/factories';
+import { createInventoryItem, createJournalEntry, createNote, SCHEMA_VERSION } from '../../domain/factories';
 import { exportBundle, importBundle, BUNDLE_FORMAT } from '../transfer';
 
 /**
@@ -50,7 +50,8 @@ describe('character repository', () => {
     const created = await seedCharacter();
     const found = await characters.get(created.id);
     expect(found?.identity.name).toBe('Thorin');
-    expect(found?.schemaVersion).toBe(1);
+    // Asserted against the constant, not a literal, so a schema bump does not fail this test.
+    expect(found?.schemaVersion).toBe(SCHEMA_VERSION);
   });
 
   it('refreshes updatedAt on every write', async () => {

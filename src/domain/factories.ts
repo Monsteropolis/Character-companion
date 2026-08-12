@@ -11,8 +11,10 @@ import type {
   NoteKind,
 } from './types';
 
-/** Current schema version. Bump when a migration is added to `persistence/migrations.ts`. */
-export const SCHEMA_VERSION = 1;
+import { CURRENT_SCHEMA_VERSION, emptyStatOverrides } from '../persistence/migrations';
+
+/** Current schema version. Defined alongside the migrations that produce it. */
+export const SCHEMA_VERSION = CURRENT_SCHEMA_VERSION;
 
 export function newId(): string {
   // crypto.randomUUID is available in every target browser and in Node 19+.
@@ -68,6 +70,8 @@ export function createCharacter(overrides: Partial<Character> = {}): Character {
       misc: zeroAbilities(),
       override: {},
     },
+    abilityAdjustments: [],
+    statOverrides: emptyStatOverrides(),
     proficiencies: [],
     resources: {
       currentHp: 0,

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { CustomContent, CustomContentKind, RuleEffect } from '../../domain/types';
 import { persistedBase } from '../../domain/factories';
+import { buildPayload, buildEffects, emptyForm, type HomebrewForm } from './payloads';
 
 /**
  * Homebrew authoring and exchange.
@@ -47,6 +48,8 @@ export const homebrewEntrySchema = z.object({
     .default(null),
   payload: z.record(z.string(), z.unknown()).optional().default({}),
   effects: z.array(z.record(z.string(), z.unknown())).optional().default([]),
+  /** The authoring form, so an imported entry can be edited rather than only read. */
+  form: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type HomebrewEntry = z.infer<typeof homebrewEntrySchema>;
@@ -64,22 +67,31 @@ export const homebrewPackSchema = z.object({
 
 export type HomebrewPack = z.infer<typeof homebrewPackSchema>;
 
-/** Builds a storable record from an authored or imported entry. */
+/**
+ * Builds a storable record from an authored or imported entry.
+ *
+ * The rules document is always regenerated from the authoring form rather than trusted from
+ * the entry, so an imported pack cannot inject a malformed document that would later be
+ * quarantined and silently disappear.
+ */
 export function toCustomContent(entry: HomebrewEntry): CustomContent {
+  const form: HomebrewForm = {
+    ...emptyForm(),
+    ...(entry.form as Partial<HomebrewForm> | undefined),
+    name: entry.name,
+    description: entry.description,
+  };
+
   return {
     ...persistedBase(),
     kind: entry.kind,
     name: entry.name,
     basedOn: entry.basedOn ?? null,
-    payload: {
-      // Every custom document carries the fields a rules document needs, so it can flow
-      // through the same lookup path as SRD content.
-      index: `custom:${entry.name.toLowerCase().replace(/[^\w]+/g, '-')}`,
-      name: entry.name,
-      desc: entry.description ? [entry.description] : [],
-      ...entry.payload,
-    },
-    effects: entry.effects as unknown as RuleEffect[],
+    payload: buildPayload(entry.kind, form),
+    effects: (entry.effects.length > 0
+      ? entry.effects
+      : buildEffects(entry.kind, form)) as unknown as RuleEffect[],
+    form,
   };
 }
 
@@ -96,6 +108,7 @@ export function toPack(entries: CustomContent[], name = 'Homebrew pack'): Homebr
       basedOn: c.basedOn,
       payload: (c.payload ?? {}) as Record<string, unknown>,
       effects: c.effects as unknown as Record<string, unknown>[],
+      form: (c.form ?? {}) as Record<string, unknown>,
     })),
   };
 }
