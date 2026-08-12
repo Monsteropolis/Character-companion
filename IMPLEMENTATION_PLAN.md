@@ -2,7 +2,7 @@
 
 **Living document.** Updated as phases complete. Last updated: 2026-08-12.
 
-Current status: **Phases 0–6 complete. Phase 7 (portraits & emotes) is next.**
+Current status: **Phases 0–7 complete. Phase 8 (leveling) is next.**
 
 | Phase | State |
 |---|---|
@@ -13,10 +13,11 @@ Current status: **Phases 0–6 complete. Phase 7 (portraits & emotes) is next.**
 | 4 — Inventory & equipment | ✅ complete |
 | 5 — Abilities & spellcasting | ✅ complete |
 | 6 — Journal & notes | ✅ complete |
-| 7 — Portraits & emotes | ⬜ next |
-| 8–9 | ⬜ |
+| 7 — Portraits & emotes | ✅ complete |
+| 8 — Leveling | ⬜ next |
+| 9 — Polish | ⬜ |
 
-502 tests passing; typecheck and production build clean. Every phase so far
+548 tests passing; typecheck and production build clean. Every phase so far
 verified end-to-end in a real browser.
 
 ## 1. Deviations from the suggested build order
@@ -182,11 +183,36 @@ rather than leaving entries with dangling references.
 *Deferred:* per-entry image attachments. The asset pipeline lands in Phase 7 with portraits and
 sprite sheets; wiring a second uploader now would mean building it twice.
 
-### Phase 7 — Portraits & emotes
-- Upload/crop; static, GIF/WebP, and sprite sheets; client-side resize before blob storage.
-- Named animation states with the fallback chain; emote bar with composable presentations.
-- Respects `prefers-reduced-motion`.
-- **Exit:** a static-portrait character and a sprite-sheet character both emote sensibly.
+### Phase 7 — Portraits & emotes ✅
+- ✅ Upload for still images, animated GIF/WebP and sprite sheets. Stills are downscaled to
+  1024 px; **animated images and sheets are stored byte-for-byte**, because re-encoding a GIF
+  flattens it to one frame and rescaling a sheet shifts every frame boundary.
+- ✅ Sprite sheet editor: grid (columns, rows, frame count) with derived frame size, and named
+  animation states mapped to frame ranges, each with its own live preview.
+- ✅ Named states with a full fallback chain — requested state → default → first → still image →
+  initials. A missing state is never an error and never a blank frame.
+- ✅ Emote bar wired into the play bar. Emotes resolve automatically: a matching animation if the
+  sprite has one, otherwise a bubble and a pulse, so a static portrait still reacts. Bindings are
+  composable arrays, so the same emote gains an animation later with no migration.
+- ✅ Taking damage plays the hurt emote, so the portrait reacts to play without a tap.
+- ✅ `prefers-reduced-motion` stops animation entirely, tracked live rather than sampled at mount.
+- ✅ Journal image attachments, deferred from Phase 6, now that the asset pipeline exists.
+- **Exit met:** verified in a browser with a generated 128×96 sheet — grid measured, states
+  mapped, sprite animating in the play bar, and Angry correctly degrading to a bubble.
+
+**Found while building:** three real bugs. `readDimensions` could hang forever if a decoder fired
+neither `load` nor `error`, leaving the upload spinning — now timed out. Blob resolution threw on
+a malformed record instead of degrading to the placeholder. And the play bar kept its own copy of
+the portrait list, so an upload did not appear until reload — portraits are now in the shared
+sheet context like every other entity.
+
+**Test fixtures:** sprite sheets are generated as real PNGs (`src/test/spriteFixture.ts`) rather
+than committed binaries, so each test declares its own grid and the true import path runs. Real
+sprite art takes exactly the same route.
+
+*Environment note:* `fake-indexeddb` degrades a jsdom `Blob` to a plain object on structured
+clone, so byte-level assertions run against the value `importImage` returns rather than a stored
+round trip. Real IndexedDB stores Blobs natively; the browser pass covers the stored bytes.
 
 ### Phase 8 — Leveling
 - `levelUpPlan` flow: HP mode, ASI vs feat, subclass at the right level, new spells, expertise.

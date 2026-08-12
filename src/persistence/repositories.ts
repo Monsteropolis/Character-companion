@@ -8,6 +8,7 @@ import type {
   Note,
   Persisted,
   CustomContent,
+  PortraitAsset,
   StoredAsset,
   LevelUpRecord,
 } from '../domain/types';
@@ -191,6 +192,34 @@ export const assetRepo = {
     const found = await db().assets.get(id);
     if (!found) return;
     await db().assets.put({ ...found, deletedAt: Date.now(), updatedAt: Date.now() });
+  },
+};
+
+export const portraits = {
+  async listForCharacter(characterId: string): Promise<PortraitAsset[]> {
+    const rows = await db().portraits.where('characterId').equals(characterId).toArray();
+    return rows.filter(isLive);
+  },
+  async get(id: string): Promise<PortraitAsset | null> {
+    const found = await db().portraits.get(id);
+    return found && isLive(found) ? found : null;
+  },
+  async save(portrait: PortraitAsset): Promise<PortraitAsset> {
+    const next = touch(portrait);
+    await db().portraits.put(next);
+    return next;
+  },
+  /** Removes the portrait and the image blobs only it referenced. */
+  async remove(id: string): Promise<void> {
+    const found = await db().portraits.get(id);
+    if (!found) return;
+    const now = Date.now();
+    await db().portraits.put({ ...found, deletedAt: now, updatedAt: now });
+
+    const blobIds = [found.blobId, ...found.states.map((s) => s.blobId)].filter(
+      (b): b is string => Boolean(b),
+    );
+    for (const blobId of blobIds) await assetRepo.remove(blobId);
   },
 };
 

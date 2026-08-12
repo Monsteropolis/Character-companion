@@ -168,6 +168,21 @@ body {
 .prose-entry > :first-child { margin-top: 0; }
 .prose-entry > :last-child { margin-bottom: 0; }
 
+/* Emote feedback. Both are disabled wholesale by the reduced-motion block above. */
+@keyframes portrait-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+@keyframes portrait-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.portrait-shake { animation: portrait-shake 0.42s ease-in-out; }
+.portrait-pulse { animation: portrait-pulse 0.42s ease-in-out; }
+
 @utility display-face {
   font-family: var(--font-display);
   letter-spacing: -0.01em;

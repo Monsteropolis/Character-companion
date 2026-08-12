@@ -347,6 +347,69 @@ export interface StoredAsset extends Persisted {
   height: number | null;
 }
 
+/**
+ * A character portrait: a still image, an animated image, or a sprite sheet.
+ *
+ * Modelled for expansion per the brief. `states` may be empty and is never assumed complete --
+ * no character has every animation, so every lookup resolves through a fallback chain
+ * (see `engine/sprites.ts`).
+ */
+export interface PortraitAsset extends Persisted {
+  characterId: string;
+  kind: 'static' | 'animated-image' | 'spritesheet';
+  /** The stored image blob this portrait renders from. */
+  blobId: string;
+  name: string;
+  spritesheet: SpritesheetMeta | null;
+  states: AnimationState[];
+  /** Usually 'idle'. Falls back to the first state when absent. */
+  defaultState: string;
+  emotes: EmoteBinding[];
+}
+
+export interface SpritesheetMeta {
+  frameWidth: number;
+  frameHeight: number;
+  columns: number;
+  rows: number;
+  /** Frames actually present; a sheet's last row is often partial. */
+  frameCount: number;
+}
+
+export interface AnimationState {
+  /** idle | happy | angry | sad | hurt | surprised | laugh | attack | celebrate | sleep | custom */
+  name: string;
+  frames: number[];
+  fps: number;
+  loop: boolean;
+  /** Per-state image, for portraits that use separate files rather than one sheet. */
+  blobId: string | null;
+}
+
+export interface EmoteBinding {
+  emote: string;
+  /**
+   * Composable and ordered.
+   *
+   * This is what makes the emote system future-proof: a static portrait resolves an emote to
+   * a bubble plus a pulse today, and the same binding gains an `animation` entry once a sprite
+   * sheet is uploaded -- with no schema change and no data migration.
+   */
+  presentation: EmotePresentation[];
+}
+
+export type Anchor = 'top' | 'bottom' | 'left' | 'right' | 'center';
+
+export type EmotePresentation =
+  | { type: 'animation'; state: string }
+  | { type: 'alt-portrait'; blobId: string }
+  | { type: 'overlay'; blobId: string; anchor: Anchor }
+  | { type: 'vfx'; effect: string }
+  | { type: 'bubble'; text: string }
+  | { type: 'shake'; params: Record<string, number | string> }
+  | { type: 'pulse'; params: Record<string, number | string> }
+  | { type: 'tint'; params: Record<string, number | string> };
+
 export interface LevelUpRecord extends Persisted {
   characterId: string;
   classIndex: string;

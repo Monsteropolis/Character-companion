@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { assetRepo } from '../../persistence/repositories';
+import { assetRepo, portraits as portraitRepo } from '../../persistence/repositories';
+import { toObjectUrl } from './assets';
 import type { Character } from '../../domain/types';
 
 /**
@@ -24,9 +25,12 @@ export function usePortraitUrls(characters: Character[]): Record<string, string>
       const next: Record<string, string> = {};
       for (const character of characters) {
         if (!character.portraitId) continue;
-        const asset = await assetRepo.get(character.portraitId);
-        if (!asset) continue;
-        const url = URL.createObjectURL(asset.blob);
+        // portraitId points at a portrait configuration, which in turn names the image blob.
+        const portrait = await portraitRepo.get(character.portraitId);
+        if (!portrait) continue;
+        const asset = await assetRepo.get(portrait.blobId);
+        const url = toObjectUrl(asset?.blob);
+        if (!url) continue;
         created.push(url);
         next[character.id] = url;
       }

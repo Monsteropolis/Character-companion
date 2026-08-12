@@ -6,6 +6,7 @@ import type {
   JournalEntry,
   LevelUpRecord,
   Note,
+  PortraitAsset,
   StoredAsset,
 } from '../domain/types';
 
@@ -33,6 +34,7 @@ export class CharacterCompanionDb extends Dexie {
   customContent!: EntityTable<CustomContent, 'id'>;
   assets!: EntityTable<StoredAsset, 'id'>;
   levelUpRecords!: EntityTable<LevelUpRecord, 'id'>;
+  portraits!: EntityTable<PortraitAsset, 'id'>;
   appMeta!: EntityTable<AppMeta, 'key'>;
 
   constructor(name = 'character-companion') {
@@ -48,6 +50,13 @@ export class CharacterCompanionDb extends Dexie {
       assets: 'id, characterId, kind',
       levelUpRecords: 'id, characterId, level',
       appMeta: 'key',
+    });
+
+    // v2 adds portrait configuration: the animation states and sprite-sheet geometry that sit
+    // on top of a stored image blob. Kept in its own table rather than on the character so a
+    // character can hold several portraits (alternate forms) without reshaping the record.
+    this.version(2).stores({
+      portraits: 'id, characterId',
     });
   }
 }

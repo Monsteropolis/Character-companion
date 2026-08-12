@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useSheet } from './CharacterShell';
-import { usePortraitUrls } from '../portraits/usePortraitUrl';
+import { PortraitView, useEmotePlayback } from '../portraits/PortraitView';
+import { EmoteBar, EmoteBubble } from '../portraits/EmoteBar';
+import { resolveEmote } from '../../engine/sprites';
 import { characterDisplayName, primaryClass } from '../../domain/factories';
 import { formatModifier } from '../../engine/contributions';
 import { Button } from '../../ui/primitives';
@@ -8,14 +10,15 @@ import { Button } from '../../ui/primitives';
 /**
  * The persistent play bar.
  *
- * Everything here is one tap from anywhere in the app: portrait, hit points, AC, conditions.
- * Damage and healing in particular happen many times per session, so they get a dedicated
- * always-visible control rather than living inside the Combat tab.
+ * Everything here is one tap from anywhere in the app: portrait, hit points, AC, conditions and
+ * emotes. Damage and healing happen many times per session, so they get an always-visible
+ * control rather than living inside the Combat tab.
  */
 export function PlayBar() {
-  const { character, stats, update } = useSheet();
-  const portraits = usePortraitUrls(character ? [character] : []);
+  const { character, stats, update, activePortrait: portrait, portraitUrls } = useSheet();
   const [amount, setAmount] = useState('');
+  const [showEmotes, setShowEmotes] = useState(false);
+  const emote = useEmotePlayback(portrait);
 
   if (!character || !stats) return null;
 
@@ -36,11 +39,12 @@ export function PlayBar() {
       },
     });
     setAmount('');
+    // Taking damage plays the hurt emote, so the portrait reacts to play without a tap.
+    emote.play(resolveEmote(portrait, portrait?.emotes ?? [], 'hurt'));
   }
 
   async function applyHealing() {
     if (!character || parsed === 0) return;
-    // Healing never exceeds the maximum, and never revives negative hit points from below zero.
     await update({
       resources: { ...character.resources, currentHp: Math.min(maxHp, currentHp + parsed) },
     });
@@ -50,9 +54,7 @@ export function PlayBar() {
   async function applyTempHp() {
     if (!character || parsed === 0) return;
     // Temporary hit points do not stack: the larger pool replaces the smaller.
-    await update({
-      resources: { ...character.resources, tempHp: Math.max(tempHp, parsed) },
-    });
+    await update({ resources: { ...character.resources, tempHp: Math.max(tempHp, parsed) } });
     setAmount('');
   }
 
@@ -62,21 +64,18 @@ export function PlayBar() {
   const cls = primaryClass(character);
 
   return (
-    <section
-      aria-label="Character status"
-      className="panel sticky top-16 z-10 mb-4 p-3 lg:static"
-    >
+    <section aria-label="Character status" className="panel sticky top-16 z-10 mb-4 p-3 lg:static">
       <div className="flex items-center gap-3">
-        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[var(--accent-subtle)]">
-          {portraits[character.id] ? (
-            <img src={portraits[character.id]} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center" aria-hidden="true">
-              <span className="display-face text-2xl font-semibold text-[var(--accent)]">
-                {characterDisplayName(character).slice(0, 1).toUpperCase()}
-              </span>
-            </div>
-          )}
+        <div className="relative shrink-0">
+          <PortraitView
+            portrait={portrait}
+            imageUrl={portrait ? (portraitUrls.get(portrait.blobId) ?? null) : null}
+            stateName={emote.state}
+            fallbackInitial={characterDisplayName(character).slice(0, 1).toUpperCase()}
+            className="h-16 w-16 overflow-hidden rounded-xl bg-[var(--accent-subtle)]"
+            effect={emote.effect}
+          />
+          {emote.bubble ? <EmoteBubble text={emote.bubble} /> : null}
         </div>
 
         <div className="min-w-0 flex-1">
@@ -134,7 +133,7 @@ export function PlayBar() {
           </p>
         ) : null}
 
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <input
             type="number"
             inputMode="numeric"
@@ -154,7 +153,24 @@ export function PlayBar() {
           <Button variant="ghost" onClick={applyTempHp} disabled={parsed === 0}>
             Temp
           </Button>
+          <Button
+            variant={showEmotes ? 'primary' : 'ghost'}
+            onClick={() => setShowEmotes(!showEmotes)}
+            aria-expanded={showEmotes}
+            className="ml-auto"
+          >
+            Emotes
+          </Button>
         </div>
+
+        {showEmotes ? (
+          <div className="mt-2">
+            <EmoteBar
+              portrait={portrait}
+              onEmote={(name) => emote.play(resolveEmote(portrait, portrait?.emotes ?? [], name))}
+            />
+          </div>
+        ) : null}
       </div>
 
       {character.resources.conditions.length > 0 || character.resources.exhaustion > 0 ? (

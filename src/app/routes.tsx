@@ -12,6 +12,7 @@ import { InventoryTab } from '../features/inventory/InventoryTab';
 import { SpellsTab } from '../features/spells/SpellsTab';
 import { JournalTab } from '../features/journal/JournalTab';
 import { NotesTab } from '../features/notes/NotesTab';
+import { PortraitTab } from '../features/portraits/PortraitTab';
 
 /**
  * Route table.
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
           { path: 'inventory', element: <InventoryTab /> },
           { path: 'journal', element: <JournalTab /> },
           { path: 'notes', element: <NotesTab /> },
+          { path: 'portrait', element: <PortraitTab /> },
         ],
       },
       {

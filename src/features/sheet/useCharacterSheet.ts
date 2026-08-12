@@ -5,12 +5,14 @@ import {
   inventory as inventoryRepo,
   journal as journalRepo,
   notes as notesRepo,
+  portraits as portraitRepo,
 } from '../../persistence/repositories';
 import { deriveCharacter, emptyResolvedRules, type ResolvedRules, type DerivedStats } from '../../engine/derive';
 import { deriveClassResources, type ClassLevelRow, type ResourcePool, type ClassStat } from '../../engine/classResources';
 import { deriveSpellcasting, type LevelSlotRow, type SpellcastingSnapshot } from '../../engine/spellcasting';
 import type { AbilityId } from '../../rules/schemas/primitives';
-import type { Character, InventoryItem, JournalEntry, Note } from '../../domain/types';
+import { resolveBlobUrls } from '../portraits/assets';
+import type { Character, InventoryItem, JournalEntry, Note, PortraitAsset } from '../../domain/types';
 
 /**
  * Loads a character and everything needed to derive its statistics.
@@ -32,6 +34,16 @@ export interface CharacterSheet {
   spellcasting: SpellcastingSnapshot | null;
   journal: JournalEntry[];
   notes: Note[];
+  /**
+   * Portraits live here rather than in each component so the play bar, the gallery and the
+   * portrait manager all read one list -- otherwise uploading a portrait leaves the play bar
+   * showing a stale placeholder until the page is reloaded.
+   */
+  portraits: PortraitAsset[];
+  portraitUrls: Map<string, string>;
+  activePortrait: PortraitAsset | null;
+  savePortrait: (portrait: PortraitAsset) => Promise<PortraitAsset>;
+  removePortrait: (id: string) => Promise<void>;
   loading: boolean;
   error: string | null;
   update: (patch: Partial<Character>) => Promise<void>;
@@ -49,6 +61,8 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [portraitList, setPortraitList] = useState<PortraitAsset[]>([]);
+  const [portraitUrls, setPortraitUrls] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,14 +81,16 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
         setCharacter(null);
       } else {
         setCharacter(found);
-        const [loadedItems, loadedJournal, loadedNotes] = await Promise.all([
+        const [loadedItems, loadedJournal, loadedNotes, loadedPortraits] = await Promise.all([
           inventoryRepo.list(characterId),
           journalRepo.list(characterId),
           notesRepo.list(characterId),
+          portraitRepo.listForCharacter(characterId),
         ]);
         setItems(loadedItems);
         setJournal(loadedJournal);
         setNotes(loadedNotes);
+        setPortraitList(loadedPortraits);
         setError(null);
       }
     } catch (err) {
@@ -154,6 +170,47 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
       current.map((e) => ({ ...e, links: e.links.filter((l) => l.noteId !== id) })),
     );
   }, []);
+
+  const savePortrait = useCallback(async (portrait: PortraitAsset) => {
+    const saved = await portraitRepo.save(portrait);
+    setPortraitList((current) =>
+      current.some((p) => p.id === saved.id)
+        ? current.map((p) => (p.id === saved.id ? saved : p))
+        : [...current, saved],
+    );
+    return saved;
+  }, []);
+
+  const removePortrait = useCallback(async (id: string) => {
+    await portraitRepo.remove(id);
+    setPortraitList((current) => current.filter((p) => p.id !== id));
+  }, []);
+
+  // Object URLs are keyed on the blob ids, so renaming a state does not churn them, and are
+  // revoked whenever that set changes or the sheet unmounts.
+  const blobKey = portraitList
+    .flatMap((p) => [p.blobId, ...p.states.map((s) => s.blobId)])
+    .filter(Boolean)
+    .join(',');
+
+  useEffect(() => {
+    let cancelled = false;
+    let created: string[] = [];
+
+    void resolveBlobUrls([...new Set(blobKey.split(',').filter(Boolean))]).then((map) => {
+      created = [...map.values()];
+      if (cancelled) {
+        created.forEach((u) => URL.revokeObjectURL(u));
+        return;
+      }
+      setPortraitUrls(map);
+    });
+
+    return () => {
+      cancelled = true;
+      created.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [blobKey]);
 
   const { rules, features, levelRows } = useMemo(() => {
     const data = rulesQuery.data;
@@ -304,6 +361,11 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
     spellcasting,
     journal,
     notes,
+    portraits: portraitList,
+    portraitUrls,
+    activePortrait: portraitList.find((p) => p.id === character?.portraitId) ?? null,
+    savePortrait,
+    removePortrait,
     loading: loading || rulesQuery.isLoading,
     error,
     update,

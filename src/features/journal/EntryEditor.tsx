@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Panel, Button } from '../../ui/primitives';
+import { importImage, resolveBlobUrls } from '../portraits/assets';
+import { assetRepo } from '../../persistence/repositories';
 import { Field, TextInput } from '../creation/steps/parts';
 import { RichTextEditor } from '../../ui/RichTextEditor';
 import { VisibilityToggle } from '../../ui/VisibilityToggle';
@@ -27,6 +30,44 @@ export function EntryEditor({
 }) {
   const set = <K extends keyof JournalEntry>(key: K, value: JournalEntry[K]) =>
     onChange({ ...entry, [key]: value });
+
+  const [imageUrls, setImageUrls] = useState<Map<string, string>>(new Map());
+  const [imageError, setImageError] = useState<string | null>(null);
+
+  // Object URLs for attached images, revoked when the attachment set changes.
+  const attachmentKey = entry.imageAssetIds.join(',');
+  useEffect(() => {
+    let cancelled = false;
+    let created: string[] = [];
+    void resolveBlobUrls(entry.imageAssetIds).then((map) => {
+      created = [...map.values()];
+      if (cancelled) {
+        created.forEach((u) => URL.revokeObjectURL(u));
+        return;
+      }
+      setImageUrls(map);
+    });
+    return () => {
+      cancelled = true;
+      created.forEach((u) => URL.revokeObjectURL(u));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attachmentKey]);
+
+  async function attachImage(file: File) {
+    setImageError(null);
+    try {
+      const { asset } = await importImage(file, entry.characterId, { kind: 'journal-image' });
+      set('imageAssetIds', [...entry.imageAssetIds, asset.id]);
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'That image could not be attached.');
+    }
+  }
+
+  async function detachImage(assetId: string) {
+    await assetRepo.remove(assetId);
+    set('imageAssetIds', entry.imageAssetIds.filter((id) => id !== assetId));
+  }
 
   return (
     <Panel className="mb-4 p-4">
@@ -112,6 +153,51 @@ export function EntryEditor({
           }
           placeholder="e.g. combat, betrayal"
         />
+      </Field>
+
+      <Field label="Images" hint="Maps, handouts, a sketch of the room.">
+        <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-[var(--border-strong)] px-3 text-sm hover:bg-[var(--accent-subtle)]">
+          Attach image
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="sr-only"
+            aria-label="Attach image to entry"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void attachImage(file);
+              e.target.value = '';
+            }}
+          />
+        </label>
+
+        {imageError ? (
+          <p role="alert" className="mt-2 text-sm text-[var(--danger)]">
+            {imageError}
+          </p>
+        ) : null}
+
+        {entry.imageAssetIds.length > 0 ? (
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {entry.imageAssetIds.map((id) => (
+              <li key={id} className="relative">
+                <img
+                  src={imageUrls.get(id) ?? ''}
+                  alt=""
+                  className="h-20 w-20 rounded-lg border border-[var(--border)] object-cover"
+                />
+                <button
+                  type="button"
+                  aria-label="Remove image"
+                  onClick={() => void detachImage(id)}
+                  className="absolute -top-2 -right-2 h-7 w-7 rounded-full border border-[var(--border-strong)] bg-[var(--surface-overlay)] text-xs"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </Field>
 
       <LinkPicker
