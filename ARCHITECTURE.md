@@ -123,7 +123,30 @@ every persisted record carries:
 That is the complete set of affordances needed to add a sync service later without touching
 feature code.
 
-## 7. Cross-cutting concerns
+## 7. Character-driven theming
+
+Chosen direction: the interface shifts mood per character, so a warlock's sheet doesn't read like
+a paladin's. The obvious naive implementation — arbitrary user-picked colours — reliably produces
+unreadable sheets in dim light, so theming is **constrained by construction**:
+
+- **Two-layer tokens.** A fixed *structural* layer (surfaces, elevation, text ramp, spacing,
+  radii) that themes cannot touch, and a *mood* layer (accent, secondary accent, glow, texture
+  intensity) that they can.
+- **Curated moods, not a colour picker.** A finite set of hand-tuned presets (arcane, martial,
+  divine, primal, shadow, fey, …), each defined in **OKLCH** with fixed lightness anchors, so
+  swapping hue cannot change contrast.
+- **Contrast is enforced in CI.** Every mood × both themes is checked against WCAG AA for text
+  and UI components by an automated test. A mood that fails does not ship.
+- **Accent is never the only signal.** Mood colour is decorative; state (proficient, equipped,
+  private, damaged) is always carried by shape, icon, or text as well — otherwise theming breaks
+  accessibility and colour-blind users.
+- **Default is derived, not demanded.** A character's mood is suggested from class/subclass on
+  creation and freely overridable, so the feature costs the user nothing to ignore.
+
+Mobile-first (per §5) keeps this honest: texture and glow are the first things dropped at small
+sizes and under `prefers-reduced-motion`.
+
+## 8. Cross-cutting concerns
 
 - **Error handling.** Route-level error boundaries; a rules-source failure degrades to bundled
   data and a warning banner, never a blank screen. Loading and empty states are required for

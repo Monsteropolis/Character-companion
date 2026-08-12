@@ -115,23 +115,25 @@ Each phase ends in a working, committed, demonstrable app.
 `api.open5e.com` (403 at the proxy). `github.com` is reachable, so the vendored-dataset approach
 works here; the `HttpRulesSource` will need to be verified in an unrestricted environment.
 
-## 5. Open questions
+## 5. Decisions (answered 2026-08-12)
 
-Blocking questions are marked ⚠ — they change architecture, not just styling.
+1. **Homebrew: authoring UI *and* JSON import.** Phase 2 ships in-app create/duplicate/override
+   forms plus an import/export format for community content packs. Confirms custom content as
+   the largest single item in Phase 2.
+2. **Sharing: marked + exportable flag.** No backend, no accounts in v1. Visibility stays a
+   required, visually unmistakable field; public entries export for manual sharing. The sync-ready
+   model (`ARCHITECTURE.md` §6) keeps a real shared view available later.
+3. **Primary device: phone at the table.** Mobile-first layout designed natively, adapted upward
+   to tablet and desktop.
+4. **Visuals: character-driven theming.** A base design system whose accent/mood shifts per
+   character. See `ARCHITECTURE.md` §8 for how this is constrained so it cannot break contrast.
 
-1. ⚠ **Homebrew strategy.** Given the SRD gap, should Phase 2 ship (a) a full homebrew authoring
-   UI, (b) a JSON import format for community content packs, or (c) both? This sets Phase 2 scope
-   substantially.
-2. ⚠ **Sharing.** Does "public journal" need a real DM-facing view (implying a backend and
-   accounts sooner), or is a marked-and-exportable flag sufficient for v1?
-3. **Primary device.** Phone at the table, tablet, or desktop first? Decides which layout gets
-   designed first rather than adapted.
-4. **Sprite assets.** Do you have sprite sheets/animation states already, and in what format?
-   Determines whether Phase 7 needs an importer or an authoring tool.
-5. **Multiclassing in v1?** The model supports it from day one; the question is whether the
-   *creation and level-up UI* must expose it in v1 or can defer.
-6. **Visual direction.** How far toward "atmospheric" — a restrained dark parchment/ink system,
-   or something heavier with texture and ornament?
+### Remaining questions (non-blocking — proceeding on stated defaults)
+
+5. **Sprite assets.** Format and availability unknown. *Default:* Phase 7 ships an importer
+   accepting static images, animated GIF/WebP, and grid-based sprite sheets with a mapping editor.
+6. **Multiclassing UI.** *Default:* the data model and engine support it from day one; the
+   creation/level-up UI exposes it in Phase 8, not Phase 2.
 
 ## 6. Definition of done (every phase)
 
