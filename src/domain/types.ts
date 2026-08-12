@@ -207,6 +207,36 @@ export interface InventoryItem extends Persisted {
   effects: RuleEffect[];
   /** Bags of holding and DM fiat. */
   weightless: boolean;
+  /**
+   * Mechanical stats copied from rules content when the item enters the inventory.
+   *
+   * Snapshotting rather than looking up keeps a weapon working if its rules entry is later
+   * edited or deleted, and is what lets a fully custom item behave identically to an SRD one.
+   */
+  armor: ArmorMeta | null;
+  weapon: WeaponMeta | null;
+}
+
+export interface ArmorMeta {
+  base: number;
+  dexBonus: boolean;
+  /** null means uncapped (light armour); medium armour caps at 2. */
+  maxDex: number | null;
+  strMinimum: number;
+  stealthDisadvantage: boolean;
+  isShield: boolean;
+}
+
+export interface WeaponMeta {
+  damageDice: string;
+  damageType: string;
+  versatileDice: string | null;
+  ranged: boolean;
+  properties: string[];
+  /** e.g. 'martial-weapons', used to check category proficiency. */
+  categoryProficiency: string;
+  rangeNormal: number | null;
+  rangeLong: number | null;
 }
 
 export type NoteKind =

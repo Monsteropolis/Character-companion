@@ -115,6 +115,8 @@ export function createInventoryItem(
     notes: '',
     effects: [],
     weightless: false,
+    armor: null,
+    weapon: null,
     ...overrides,
   };
 }
