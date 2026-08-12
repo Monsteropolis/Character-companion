@@ -55,6 +55,7 @@ src/
   engine/         # PURE rules engine. No React, no I/O, no persistence.
     effects/      #   hand-authored machine-readable riders for prose features
     derive/       #   deriveCharacter() and its contributors
+    dice.ts       #   the one exception: randomness, with an injectable generator
   domain/         # entity types, factories, invariants, schema migrations
   persistence/    # Dexie schema, repositories, import/export, migration runner
   features/       # vertical slices: creation, sheet, inventory, spellbook,
@@ -99,15 +100,21 @@ Damage and healing therefore cost one tap from anywhere in the app — including
 /create                 creation wizard (step routes, resumable)
 /c/:id                  character shell  ── Play Bar + tabs
       /overview  /combat  /abilities  /spells  /inventory  /journal  /notes
-/c/:id/level-up         level-up flow (modal route)
+      /portrait  /level-up
 /custom                 homebrew content manager
 /settings
 ```
 
 - **Spells** is hidden entirely for non-casters rather than shown empty.
 - **Desktop** ≥1024px: two columns, Play Bar docked as a right rail.
-- **Mobile**: bottom tab bar, Play Bar docked directly above it, thumb-reachable.
+- **Mobile**: the Play Bar sticks below the masthead and the tab strip scrolls horizontally.
+  *This is a deviation from the plan, which called for a bottom tab bar.* With ten sections a
+  bottom bar would scroll horizontally too — the same gesture, lower on the screen, and costing
+  the vertical space the Play Bar needs. The actions that matter every round are in the Play Bar
+  itself, which is what had to stay reachable; switching tabs is not a per-round action.
 - Tab state is URL-driven so a browser back button behaves and views are linkable.
+- Route content is code-split; the shell and gallery are not. Navigation moves focus to `<main>`,
+  and the error boundary is keyed on the path so one broken route cannot block the others.
 
 ## 6. Cloud-sync readiness (built for, not built now)
 
@@ -123,7 +130,30 @@ every persisted record carries:
 That is the complete set of affordances needed to add a sync service later without touching
 feature code.
 
-## 7. Cross-cutting concerns
+## 7. Character-driven theming
+
+Chosen direction: the interface shifts mood per character, so a warlock's sheet doesn't read like
+a paladin's. The obvious naive implementation — arbitrary user-picked colours — reliably produces
+unreadable sheets in dim light, so theming is **constrained by construction**:
+
+- **Two-layer tokens.** A fixed *structural* layer (surfaces, elevation, text ramp, spacing,
+  radii) that themes cannot touch, and a *mood* layer (accent, secondary accent, glow, texture
+  intensity) that they can.
+- **Curated moods, not a colour picker.** A finite set of hand-tuned presets (arcane, martial,
+  divine, primal, shadow, fey, …), each defined in **OKLCH** with fixed lightness anchors, so
+  swapping hue cannot change contrast.
+- **Contrast is enforced in CI.** Every mood × both themes is checked against WCAG AA for text
+  and UI components by an automated test. A mood that fails does not ship.
+- **Accent is never the only signal.** Mood colour is decorative; state (proficient, equipped,
+  private, damaged) is always carried by shape, icon, or text as well — otherwise theming breaks
+  accessibility and colour-blind users.
+- **Default is derived, not demanded.** A character's mood is suggested from class/subclass on
+  creation and freely overridable, so the feature costs the user nothing to ignore.
+
+Mobile-first (per §5) keeps this honest: texture and glow are the first things dropped at small
+sizes and under `prefers-reduced-motion`.
+
+## 8. Cross-cutting concerns
 
 - **Error handling.** Route-level error boundaries; a rules-source failure degrades to bundled
   data and a warning banner, never a blank screen. Loading and empty states are required for
