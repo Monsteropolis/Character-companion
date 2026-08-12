@@ -10,6 +10,8 @@ import { CombatTab } from '../features/sheet/CombatTab';
 import { AbilitiesTab } from '../features/sheet/AbilitiesTab';
 import { InventoryTab } from '../features/inventory/InventoryTab';
 import { SpellsTab } from '../features/spells/SpellsTab';
+import { JournalTab } from '../features/journal/JournalTab';
+import { NotesTab } from '../features/notes/NotesTab';
 
 /**
  * Route table.
@@ -29,15 +31,6 @@ const CustomContentPage = lazy(() =>
   import('../features/custom/CustomContentPage').then((m) => ({ default: m.CustomContentPage })),
 );
 
-function Placeholder({ title, phase }: { title: string; phase: string }) {
-  return (
-    <div className="mx-auto max-w-2xl px-4 py-16 text-center">
-      <h1 className="display-face mb-2 text-2xl font-semibold">{title}</h1>
-      <p className="text-sm text-[var(--text-muted)]">Arriving in {phase}.</p>
-    </div>
-  );
-}
-
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -55,8 +48,8 @@ export const router = createBrowserRouter([
           { path: 'abilities', element: <AbilitiesTab /> },
           { path: 'spells', element: <SpellsTab /> },
           { path: 'inventory', element: <InventoryTab /> },
-          { path: 'journal', element: <Placeholder title="Journal" phase="Phase 6" /> },
-          { path: 'notes', element: <Placeholder title="Notes" phase="Phase 6" /> },
+          { path: 'journal', element: <JournalTab /> },
+          { path: 'notes', element: <NotesTab /> },
         ],
       },
       {

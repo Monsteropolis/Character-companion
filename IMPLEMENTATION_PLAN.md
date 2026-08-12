@@ -2,7 +2,7 @@
 
 **Living document.** Updated as phases complete. Last updated: 2026-08-12.
 
-Current status: **Phases 0–5 complete. Phase 6 (journal & notes) is next.**
+Current status: **Phases 0–6 complete. Phase 7 (portraits & emotes) is next.**
 
 | Phase | State |
 |---|---|
@@ -12,10 +12,11 @@ Current status: **Phases 0–5 complete. Phase 6 (journal & notes) is next.**
 | 3 — Dashboard | ✅ complete |
 | 4 — Inventory & equipment | ✅ complete |
 | 5 — Abilities & spellcasting | ✅ complete |
-| 6 — Journal & notes | ⬜ next |
-| 7–9 | ⬜ |
+| 6 — Journal & notes | ✅ complete |
+| 7 — Portraits & emotes | ⬜ next |
+| 8–9 | ⬜ |
 
-465 tests passing; typecheck and production build clean. Every phase so far
+502 tests passing; typecheck and production build clean. Every phase so far
 verified end-to-end in a real browser.
 
 ## 1. Deviations from the suggested build order
@@ -158,11 +159,28 @@ swallowed, now falling back to the pool definition. The browser pass caught thre
 with no accessible name (starting level, ability-score method, personality suggestions), now
 labelled.
 
-### Phase 6 — Journal & notes
-- Rich text; **public/private required at creation**, visually unmistakable.
-- Tags, session numbers, in-game dates, images, search, chronological browsing.
-- Typed notes (NPC/location/quest/faction/secret/goal/relationship) with `EntityLink` + backlinks.
-- **Exit:** entries and notes cross-link; privacy is never ambiguous in the UI.
+### Phase 6 — Journal & notes ✅
+- ✅ Rich text as a constrained markdown subset — headings, lists, quotes, bold, italic, code,
+  links — with a preview. No editor dependency and no hidden document model, so entries stay
+  searchable, diffable and portable through export.
+- ✅ **Privacy is unmistakable.** Visibility is two labelled buttons, never an unlabelled toggle;
+  new entries default to private and Secrets default to private; every row carries a badge and
+  private rows a visible edge; a visibility filter exists; and a round trip through export is
+  tested to preserve it.
+- ✅ Tags, session numbers, in-game dates (free text — fantasy calendars are not ISO dates),
+  search across title/body/tags, and chronological browsing in either direction.
+- ✅ Typed notes for all seven kinds with per-kind structured fields (quest status, NPC attitude,
+  faction standing), `EntityLink` cross-links, and **backlinks** so opening an NPC shows every
+  session they appeared in.
+- **Exit met:** entries and notes cross-link both ways; visibility is stated in words everywhere.
+
+**Found while building:** the rich-text renderer escapes input before introducing its own tags and
+refuses to linkify `javascript:` URLs — journal entries are exported and handed to DMs, so their
+text is untrusted even in a local-only app. Deleting a note now also drops links pointing at it,
+rather than leaving entries with dangling references.
+
+*Deferred:* per-entry image attachments. The asset pipeline lands in Phase 7 with portraits and
+sprite sheets; wiring a second uploader now would mean building it twice.
 
 ### Phase 7 — Portraits & emotes
 - Upload/crop; static, GIF/WebP, and sprite sheets; client-side resize before blob storage.

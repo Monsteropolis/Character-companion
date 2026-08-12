@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCollections } from '../../rules/RulesProvider';
-import { characters as characterRepo, inventory as inventoryRepo } from '../../persistence/repositories';
+import {
+  characters as characterRepo,
+  inventory as inventoryRepo,
+  journal as journalRepo,
+  notes as notesRepo,
+} from '../../persistence/repositories';
 import { deriveCharacter, emptyResolvedRules, type ResolvedRules, type DerivedStats } from '../../engine/derive';
 import { deriveClassResources, type ClassLevelRow, type ResourcePool, type ClassStat } from '../../engine/classResources';
 import { deriveSpellcasting, type LevelSlotRow, type SpellcastingSnapshot } from '../../engine/spellcasting';
 import type { AbilityId } from '../../rules/schemas/primitives';
-import type { Character, InventoryItem } from '../../domain/types';
+import type { Character, InventoryItem, JournalEntry, Note } from '../../domain/types';
 
 /**
  * Loads a character and everything needed to derive its statistics.
@@ -25,17 +30,25 @@ export interface CharacterSheet {
   /** Level-scaled reference values such as Sneak Attack dice or Extra Attack. */
   classStats: ClassStat[];
   spellcasting: SpellcastingSnapshot | null;
+  journal: JournalEntry[];
+  notes: Note[];
   loading: boolean;
   error: string | null;
   update: (patch: Partial<Character>) => Promise<void>;
   saveItem: (item: InventoryItem) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
+  saveEntry: (entry: JournalEntry) => Promise<void>;
+  removeEntry: (id: string) => Promise<void>;
+  saveNote: (note: Note) => Promise<void>;
+  removeNote: (id: string) => Promise<void>;
   reload: () => Promise<void>;
 }
 
 export function useCharacterSheet(characterId: string | undefined): CharacterSheet {
   const [character, setCharacter] = useState<Character | null>(null);
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [journal, setJournal] = useState<JournalEntry[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +67,14 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
         setCharacter(null);
       } else {
         setCharacter(found);
-        setItems(await inventoryRepo.list(characterId));
+        const [loadedItems, loadedJournal, loadedNotes] = await Promise.all([
+          inventoryRepo.list(characterId),
+          journalRepo.list(characterId),
+          notesRepo.list(characterId),
+        ]);
+        setItems(loadedItems);
+        setJournal(loadedJournal);
+        setNotes(loadedNotes);
         setError(null);
       }
     } catch (err) {
@@ -101,6 +121,38 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
   const removeItem = useCallback(async (id: string) => {
     await inventoryRepo.remove(id);
     setItems((current) => current.filter((i) => i.id !== id));
+  }, []);
+
+  const saveEntry = useCallback(async (entry: JournalEntry) => {
+    const saved = await journalRepo.save(entry);
+    setJournal((current) =>
+      current.some((e) => e.id === saved.id)
+        ? current.map((e) => (e.id === saved.id ? saved : e))
+        : [...current, saved],
+    );
+  }, []);
+
+  const removeEntry = useCallback(async (id: string) => {
+    await journalRepo.remove(id);
+    setJournal((current) => current.filter((e) => e.id !== id));
+  }, []);
+
+  const saveNote = useCallback(async (note: Note) => {
+    const saved = await notesRepo.save(note);
+    setNotes((current) =>
+      current.some((n) => n.id === saved.id)
+        ? current.map((n) => (n.id === saved.id ? saved : n))
+        : [...current, saved],
+    );
+  }, []);
+
+  const removeNote = useCallback(async (id: string) => {
+    await notesRepo.remove(id);
+    setNotes((current) => current.filter((n) => n.id !== id));
+    // Links pointing at a deleted note are cleaned up so no entry shows a dangling reference.
+    setJournal((current) =>
+      current.map((e) => ({ ...e, links: e.links.filter((l) => l.noteId !== id) })),
+    );
   }, []);
 
   const { rules, features, levelRows } = useMemo(() => {
@@ -250,11 +302,17 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
     pools,
     classStats,
     spellcasting,
+    journal,
+    notes,
     loading: loading || rulesQuery.isLoading,
     error,
     update,
     saveItem,
     removeItem,
+    saveEntry,
+    removeEntry,
+    saveNote,
+    removeNote,
     reload: load,
   };
 }
