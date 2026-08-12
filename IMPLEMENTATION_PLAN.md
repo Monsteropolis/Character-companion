@@ -2,7 +2,14 @@
 
 **Living document.** Updated as phases complete. Last updated: 2026-08-12.
 
-Current status: **Phase 0 — architecture review complete, awaiting answers to §5 before coding.**
+Current status: **Phase 0 complete. Phase 1 (shell & persistence) is next.**
+
+| Phase | State |
+|---|---|
+| 0 — Rules foundation | ✅ complete — 89 tests, clean typecheck |
+| 1 — Shell & persistence | ⬜ next |
+| 2 — Creation wizard + custom content | ⬜ |
+| 3–9 | ⬜ |
 
 ## 1. Deviations from the suggested build order
 
@@ -23,13 +30,19 @@ The suggested order is broadly right. Three changes, each forced by a finding in
 
 Each phase ends in a working, committed, demonstrable app.
 
-### Phase 0 — Rules foundation
-- Vite + TS strict + Tailwind + tokens; lint rule banning React imports under `engine/`.
-- Vendor `5e-bits/5e-database` `src/2014/en` (MIT); attribution + SRD notice.
-- Zod schemas for all 25 collections; validation report over the full dataset.
-- `RulesSource` + `BundledRulesSource`; code-split loaders.
-- Engine primitives: modifiers, proficiency, `Contribution`/`DerivedValue` plumbing.
-- **Exit:** every SRD record validates or is explicitly quarantined; primitives fully tested.
+### Phase 0 — Rules foundation ✅
+- ✅ Vite + TS strict + Vitest. *(Tailwind/tokens and the `engine/` lint rule move to Phase 1,
+  where the first UI actually needs them.)*
+- ✅ Vendored `5e-bits/5e-database` `src/2014/en` — 3.8 MB, 25 collections, MIT + SRD notices.
+- ✅ Zod schemas for all 25 collections, optionality measured against every record.
+- ✅ Exhaustive `Choice`/`Option` schemas — all 11 `option_type` and 3 `option_set_type` variants.
+- ✅ `RulesSource` + `BundledRulesSource` with lazy per-collection loading and quarantine.
+- ✅ Engine primitives + contribution model.
+- **Exit met:** all 25 collections validate clean; 89 tests pass; typecheck clean.
+
+**Found while building:** `starting_gold` on backgrounds is a `{quantity, unit}` cost object, not
+a number — caught by boundary validation on the first run, which is precisely the class of bug
+that would otherwise have surfaced as a broken equipment step in Phase 2.
 
 ### Phase 1 — Shell & persistence
 - Routing, app shell, error boundaries, loading/empty states.
