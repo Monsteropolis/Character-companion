@@ -21,6 +21,8 @@ export interface CharacterSheet {
   loading: boolean;
   error: string | null;
   update: (patch: Partial<Character>) => Promise<void>;
+  saveItem: (item: InventoryItem) => Promise<void>;
+  removeItem: (id: string) => Promise<void>;
   reload: () => Promise<void>;
 }
 
@@ -74,6 +76,25 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
     },
     [character],
   );
+
+  /**
+   * Item writes go through storage first, then update memory.
+   *
+   * The local list is patched rather than refetched so equipping an item feels instant --
+   * a round trip to IndexedDB on every toggle is visible on a phone at a table.
+   */
+  const saveItem = useCallback(async (item: InventoryItem) => {
+    const saved = await inventoryRepo.save(item);
+    setItems((current) => {
+      const exists = current.some((i) => i.id === saved.id);
+      return exists ? current.map((i) => (i.id === saved.id ? saved : i)) : [...current, saved];
+    });
+  }, []);
+
+  const removeItem = useCallback(async (id: string) => {
+    await inventoryRepo.remove(id);
+    setItems((current) => current.filter((i) => i.id !== id));
+  }, []);
 
   const { rules, features } = useMemo(() => {
     const data = rulesQuery.data;
@@ -172,6 +193,8 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
     loading: loading || rulesQuery.isLoading,
     error,
     update,
+    saveItem,
+    removeItem,
     reload: load,
   };
 }

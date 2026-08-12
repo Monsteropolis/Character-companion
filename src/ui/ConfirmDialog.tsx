@@ -35,11 +35,15 @@ export function ConfirmDialog({
     if (!dialog) return;
 
     if (open && !dialog.open) {
-      dialog.showModal();
+      // `showModal` is missing in jsdom and very old browsers; falling back to the open
+      // attribute keeps the dialog usable instead of crashing the whole tree.
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');
       // Focus lands on Cancel, not Confirm: a stray Enter must not delete a character.
       cancelRef.current?.focus();
     } else if (!open && dialog.open) {
-      dialog.close();
+      if (typeof dialog.close === 'function') dialog.close();
+      else dialog.removeAttribute('open');
     }
   }, [open]);
 

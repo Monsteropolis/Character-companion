@@ -2,7 +2,7 @@
 
 **Living document.** Updated as phases complete. Last updated: 2026-08-12.
 
-Current status: **Phases 0–3 complete. Phase 4 (inventory & equipment) is next.**
+Current status: **Phases 0–4 complete. Phase 5 (abilities & spellcasting) is next.**
 
 | Phase | State |
 |---|---|
@@ -10,11 +10,12 @@ Current status: **Phases 0–3 complete. Phase 4 (inventory & equipment) is next
 | 1 — Shell & persistence | ✅ complete |
 | 2 — Creation wizard + custom content | ✅ complete |
 | 3 — Dashboard | ✅ complete |
-| 4 — Inventory & equipment | ⬜ next |
-| 5–9 | ⬜ |
+| 4 — Inventory & equipment | ✅ complete |
+| 5 — Abilities & spellcasting | ⬜ next |
+| 6–9 | ⬜ |
 
-355 tests passing; typecheck and production build clean. Creation and the
-dashboard both verified end-to-end in a real browser.
+402 tests passing; typecheck and production build clean. Creation, the dashboard
+and inventory all verified end-to-end in a real browser.
 
 ## 1. Deviations from the suggested build order
 
@@ -111,11 +112,23 @@ as SRD content, tested both fully-specified and near-empty.
 runner deferred in Phase 1 now exists with a migration to run: characters are upgraded on read,
 and a v1 save loads with its data intact.
 
-### Phase 4 — Inventory & equipment
-- Categories, currency (cp/sp/ep/gp/pp), attunement (3-item cap warning), charges, custom items.
-- Equipping routes item `RuleEffect`s into AC/attacks/speed.
-- Encumbrance and carrying capacity.
-- **Exit:** equipping armor/shield/magic items visibly and correctly moves the sheet's numbers.
+### Phase 4 — Inventory & equipment ✅
+- ✅ Seven categories, search, per-item quantity, charges with rest-based restore, notes.
+- ✅ Currency across all five denominations, with gain/spend that makes change automatically and
+  refuses rather than going negative; consolidation leaves electrum alone.
+- ✅ Attunement with the 3-item cap surfaced as a warning, not a hard block — DMs rule otherwise.
+- ✅ Equipping routes snapshotted armour and weapon stats into AC, attacks and speed. Equipping
+  body armour automatically removes the suit already worn, and says so.
+- ✅ Encumbrance and carrying capacity, named in words as well as colour.
+- ✅ Add from the SRD catalogue (237 equipment + 362 magic items) or create anything custom;
+  every field of an SRD item stays editable.
+- **Exit met:** equipping a chain shirt moves AC from 12 to 15 in the live app.
+
+**Found while building:** making change returned the smallest coins, so paying 5 sp from a gold
+piece produced 50 cp — value-correct but it buries the purse in loose change. Change now comes
+back in the largest sensible coins, with a regression test. Separately, `ConfirmDialog` crashed
+under jsdom because `showModal` is unimplemented there; it now falls back to the `open`
+attribute, which also covers older browsers.
 
 ### Phase 5 — Abilities & spellcasting
 - Spellbook: cantrips + levels 1–9, known/prepared/spellbook modes, rituals, concentration.
