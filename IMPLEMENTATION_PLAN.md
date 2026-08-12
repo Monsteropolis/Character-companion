@@ -2,16 +2,18 @@
 
 **Living document.** Updated as phases complete. Last updated: 2026-08-12.
 
-Current status: **Phases 0–1 complete. Phase 2 (creation wizard + custom content) is next.**
+Current status: **Phases 0–2 complete. Phase 3 (character dashboard) is next.**
 
 | Phase | State |
 |---|---|
 | 0 — Rules foundation | ✅ complete |
 | 1 — Shell & persistence | ✅ complete |
-| 2 — Creation wizard + custom content | ⬜ next |
-| 3–9 | ⬜ |
+| 2 — Creation wizard + custom content | ✅ complete |
+| 3 — Dashboard | ⬜ next |
+| 4–9 | ⬜ |
 
-177 tests passing; typecheck and production build clean.
+277 tests passing; typecheck and production build clean. Creation verified
+end-to-end in a real browser.
 
 ## 1. Deviations from the suggested build order
 
@@ -64,14 +66,21 @@ conflated two things WCAG treats differently — decorative hairlines (exempt) a
 identify a control (3:1 required). Split into `border` / `border-strong` rather than lowering the
 threshold, which would have shipped invisible form fields.
 
-### Phase 2 — Creation wizard + custom content
-- Nine steps per the brief; resumable draft; non-destructive back-navigation via `ChoiceRecord`.
-- `resolveChoice()` covering every `option_type` incl. nested `multiple` and `equipment_category`.
-- All four ability-score methods with live derived preview.
-- Custom content manager: create/duplicate/override for race, subclass, background, feat, spell,
-  item, feature — validated by the SRD schemas, selectable inside the wizard.
-- Final review showing every calculated stat.
-- **Exit:** a level-1 SRD character *and* a homebrew-subclass character both complete and persist.
+### Phase 2 — Creation wizard + custom content ✅
+- ✅ Nine steps; persisted draft; non-destructive back-navigation via origin-namespaced selections.
+- ✅ `resolveChoice()` covering every `option_type` and `option_set_type`, tested against every
+  choice in the real dataset.
+- ✅ All four ability-score methods; point buy and standard array as pickers, not free entry.
+- ✅ Homebrew manager: authoring UI **and** pack import/export, layered via `CompositeRulesSource`.
+- ✅ Review showing every calculated stat with its contributions, sharing the commit code path.
+- **Exit met:** a level-1 SRD character completes, persists, and reloads with correct derived stats.
+
+**Also landed here:** `deriveCharacter` and the effects layer, pulled forward from Phase 3
+because the review step needs real numbers. Phase 3 consumes them rather than rebuilding.
+
+**Found while building:** the SRD's `starting_gold` is a cost object; `Levels` is the only source
+for spells-known counts (Wizards are the exception, whose spellbook size is not in the table at
+all and is computed explicitly).
 
 ### Phase 3 — Dashboard
 - Play Bar (portrait, HP, AC, conditions, emote) persistent across tabs.
