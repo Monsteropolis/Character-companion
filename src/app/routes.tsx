@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppShell } from './AppShell';
 import { Spinner } from '../ui/primitives';
 import { CharacterGallery } from '../features/characters/CharacterGallery';
+import { CreationWizard } from '../features/creation/CreationWizard';
 
 /**
  * Route table.
@@ -16,6 +17,10 @@ import { CharacterGallery } from '../features/characters/CharacterGallery';
 
 const AboutPage = lazy(() =>
   import('../features/about/AboutPage').then((m) => ({ default: m.AboutPage })),
+);
+
+const CustomContentPage = lazy(() =>
+  import('../features/custom/CustomContentPage').then((m) => ({ default: m.CustomContentPage })),
 );
 
 function Placeholder({ title, phase }: { title: string; phase: string }) {
@@ -33,10 +38,7 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     children: [
       { index: true, element: <CharacterGallery /> },
-      {
-        path: 'create',
-        element: <Placeholder title="Character creation" phase="Phase 2" />,
-      },
+      { path: 'create', element: <CreationWizard /> },
       {
         path: 'c/:id',
         children: [
@@ -50,7 +52,14 @@ export const router = createBrowserRouter([
           { path: 'notes', element: <Placeholder title="Notes" phase="Phase 6" /> },
         ],
       },
-      { path: 'custom', element: <Placeholder title="Homebrew content" phase="Phase 2" /> },
+      {
+        path: 'custom',
+        element: (
+          <Suspense fallback={<Spinner label="Loading" />}>
+            <CustomContentPage />
+          </Suspense>
+        ),
+      },
       {
         path: 'about',
         element: (

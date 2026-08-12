@@ -8,5 +8,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    // Integration tests parse the full 3.8MB SRD dataset, which outruns the 5s default.
+    testTimeout: 30_000,
   },
 });
