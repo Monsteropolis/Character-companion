@@ -251,13 +251,18 @@ export function LevelUpTab() {
             ) : null}
 
             {issues.length > 0 ? (
-              <ul role="status" className="mb-3 space-y-1">
-                {issues.map((issue) => (
-                  <li key={issue} className="text-sm text-[var(--text-muted)]">
-                    {issue}
-                  </li>
-                ))}
-              </ul>
+              <div role="status" className="mb-3">
+                {/* The live region is the wrapper, not the list: role="status" on a <ul>
+                    replaces its list role and orphans the <li> children from an assistive
+                    technology's point of view. */}
+                <ul className="space-y-1">
+                  {issues.map((issue) => (
+                    <li key={issue} className="text-sm text-[var(--text-muted)]">
+                      {issue}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ) : null}
 
             <Button

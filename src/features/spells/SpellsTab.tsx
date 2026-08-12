@@ -3,6 +3,7 @@ import { useSheet } from '../sheet/CharacterShell';
 import { useCollection } from '../../rules/RulesProvider';
 import { Panel, Button, EmptyState, Spinner, SourceBadge } from '../../ui/primitives';
 import { TextInput, Select } from '../creation/steps/parts';
+import { IncrementalList } from '../../ui/IncrementalList';
 import { formatModifier } from '../../engine/contributions';
 import {
   castableSlots,
@@ -281,26 +282,27 @@ export function SpellsTab() {
           }
         />
       ) : (
-        <ul className="space-y-2">
-          {visible.map((spell) => (
-            <li key={spell.index}>
-              <SpellCard
-                spell={spell}
-                selection={knownRefs.get(spell.index) ?? null}
-                browsing={browsing}
-                slots={castableSlots(spellcasting, spell.level)}
-                concentrating={character.resources.concentratingOn === spell.index}
-                onToggleKnown={() => void toggleKnown(spell)}
-                onTogglePrepared={() => void togglePrepared(spell.index)}
-                onCast={(level, pact) => {
-                  void useSlot(level, pact, 1);
-                  if (spell.concentration) void setConcentration(spell.index);
-                }}
-                onConcentrate={() => void setConcentration(spell.index)}
-              />
-            </li>
-          ))}
-        </ul>
+        <IncrementalList
+          items={visible}
+          noun="spells"
+          keyFor={(spell) => spell.index}
+          renderItem={(spell) => (
+            <SpellCard
+              spell={spell}
+              selection={knownRefs.get(spell.index) ?? null}
+              browsing={browsing}
+              slots={castableSlots(spellcasting, spell.level)}
+              concentrating={character.resources.concentratingOn === spell.index}
+              onToggleKnown={() => void toggleKnown(spell)}
+              onTogglePrepared={() => void togglePrepared(spell.index)}
+              onCast={(level, pact) => {
+                void useSlot(level, pact, 1);
+                if (spell.concentration) void setConcentration(spell.index);
+              }}
+              onConcentrate={() => void setConcentration(spell.index)}
+            />
+          )}
+        />
       )}
     </div>
   );

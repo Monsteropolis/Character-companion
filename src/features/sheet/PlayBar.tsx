@@ -64,7 +64,10 @@ export function PlayBar() {
   const cls = primaryClass(character);
 
   return (
-    <section aria-label="Character status" className="panel sticky top-16 z-10 mb-4 p-3 lg:static">
+    <section
+      aria-label="Character status"
+      className="panel sticky top-16 z-10 mb-4 p-3 lg:top-20 lg:mb-0"
+    >
       <div className="flex items-center gap-3">
         <div className="relative shrink-0">
           <PortraitView

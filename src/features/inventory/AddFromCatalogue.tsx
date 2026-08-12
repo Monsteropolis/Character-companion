@@ -1,8 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCollections } from '../../rules/RulesProvider';
 import { Panel, Button, Spinner, SourceBadge } from '../../ui/primitives';
 import { TextInput } from '../creation/steps/parts';
 import type { InventoryItem, ItemCategory } from '../../domain/types';
+
+/** Results per slice. Enough that most searches never need a second one. */
+const PAGE = 40;
 
 /**
  * Browse SRD equipment and magic items.
@@ -34,8 +37,14 @@ export function AddFromCatalogue({
       .filter((m) => m.name.toLowerCase().includes(needle))
       .map((m) => ({ doc: m, magical: true }));
 
-    return [...equipment, ...magic].slice(0, 40);
+    return [...equipment, ...magic];
   }, [data, query]);
+
+  // Results render in slices, and the count says so. Silently truncating a search is worse than
+  // a long list: the item you wanted is missing and nothing tells you it was ever there.
+  const [limit, setLimit] = useState(PAGE);
+  useEffect(() => setLimit(PAGE), [query]);
+  const shown = results.slice(0, limit);
 
   return (
     <Panel className="mb-4 p-4">
@@ -66,7 +75,7 @@ export function AddFromCatalogue({
 
       {results.length > 0 ? (
         <ul className="mt-3 max-h-80 space-y-1 overflow-y-auto">
-          {results.map(({ doc, magical }) => (
+          {shown.map(({ doc, magical }) => (
             <li key={`${magical ? 'm' : 'e'}-${doc.index}`}>
               <button
                 type="button"
@@ -83,6 +92,16 @@ export function AddFromCatalogue({
               </button>
             </li>
           ))}
+          {results.length > shown.length ? (
+            <li className="flex flex-col items-center gap-1 pt-2">
+              <span role="status" className="text-xs text-[var(--text-muted)]">
+                Showing {shown.length} of {results.length} matches.
+              </span>
+              <Button variant="ghost" onClick={() => setLimit((current) => current + PAGE)}>
+                Show more
+              </Button>
+            </li>
+          ) : null}
         </ul>
       ) : null}
 

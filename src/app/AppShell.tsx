@@ -1,8 +1,9 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../ui/theme/ThemeProvider';
 import { requestPersistentStorage } from '../persistence/db';
 import { ErrorBoundary } from './ErrorBoundary';
+import { useOnline } from './useOnline';
 
 /**
  * The application shell: masthead, storage warning, routed content.
@@ -13,6 +14,10 @@ import { ErrorBoundary } from './ErrorBoundary';
 export function AppShell() {
   const { preference, setPreference } = useTheme();
   const [storageAtRisk, setStorageAtRisk] = useState(false);
+  const online = useOnline();
+  const location = useLocation();
+  const main = useRef<HTMLElement>(null);
+  const firstRender = useRef(true);
 
   useEffect(() => {
     // IndexedDB is evictable by default. If the browser refuses to make it persistent, the
@@ -20,11 +25,40 @@ export function AppShell() {
     void requestPersistentStorage().then((granted) => setStorageAtRisk(!granted));
   }, []);
 
+  /**
+   * Move focus to the content region when the route changes.
+   *
+   * A client-side navigation leaves focus on the link that was activated, so a keyboard or screen
+   * reader user lands nowhere -- the page silently changes underneath them. Focusing the main
+   * region puts them at the top of the new content, as a full page load would. The first render
+   * is skipped so arriving at a URL does not yank focus off whatever the browser chose.
+   */
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    main.current?.focus();
+  }, [location.pathname]);
+
   return (
     <div className="min-h-full">
+      {/* Visible only when focused, so keyboard users can jump the masthead and tab bar. */}
+      <a
+        href="#main-content"
+        className="sr-only rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--on-accent)] focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50"
+      >
+        Skip to content
+      </a>
+
       <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--surface-base)]/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <Link to="/" className="display-face text-base font-semibold tracking-tight">
+          {/* Padded to a real target: as a flex child this blockifies to exactly its 24px line
+              box, which is a fiddly tap for the one link that gets you home. */}
+          <Link
+            to="/"
+            className="display-face -mx-2 inline-flex min-h-11 items-center px-2 text-base font-semibold tracking-tight"
+          >
             Character Companion
           </Link>
 
@@ -57,8 +91,21 @@ export function AppShell() {
         </div>
       ) : null}
 
-      <main>
-        <ErrorBoundary>
+      {!online ? (
+        <div
+          role="status"
+          className="border-b border-[var(--info)] bg-[var(--surface-raised)] px-4 py-2 text-center text-xs text-[var(--text-muted)]"
+        >
+          Offline — everything still works. Rules, characters and portraits are all stored on this
+          device.
+        </div>
+      ) : null}
+
+      {/* tabIndex -1 makes the region focusable as a navigation target without adding it to the
+          tab order. The error boundary is keyed on the path so a crash on one route does not
+          leave every other route stuck behind it. */}
+      <main id="main-content" ref={main} tabIndex={-1} className="outline-none">
+        <ErrorBoundary key={location.pathname}>
           <Outlet />
         </ErrorBoundary>
       </main>

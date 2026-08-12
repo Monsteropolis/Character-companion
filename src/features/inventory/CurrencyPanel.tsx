@@ -64,15 +64,18 @@ export function CurrencyPanel({
         {COIN_ORDER.map((c) => (
           <li key={c} className="rounded-lg border border-[var(--border)] p-2 text-center">
             <span className="block text-xs text-[var(--text-muted)] uppercase">{c}</span>
+            {/* Full-height and numeric-keypad: coin counts get edited mid-session on a phone,
+                so they are a touch target, not a display. */}
             <input
               type="number"
               min={0}
+              inputMode="numeric"
               aria-label={COIN_NAMES[c]}
               value={currency[c]}
               onChange={(e) =>
                 onChange({ ...currency, [c]: Math.max(0, Number(e.target.value) || 0) })
               }
-              className="display-face w-full bg-transparent text-center text-lg outline-none"
+              className="display-face min-h-11 w-full bg-transparent text-center text-lg outline-none"
             />
           </li>
         ))}

@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { characterDisplayName } from '../../domain/factories';
 import { exportBundle, importBundle, bundleFilename } from '../../persistence/transfer';
 import { usePortraitUrls } from '../portraits/usePortraitUrl';
+import { WelcomePanel } from './WelcomePanel';
 
 /**
  * The character selection screen -- the app's front door.
@@ -121,6 +122,8 @@ export function CharacterGallery() {
           </Button>
         </div>
       </header>
+
+      <WelcomePanel />
 
       {transferError ? (
         <div

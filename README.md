@@ -3,15 +3,18 @@
 A persistent digital companion for **D&D 5e (2014 ruleset)** characters — built to feel like an
 RPG interface rather than a PDF character sheet, and to survive an entire campaign.
 
-> **Status: architecture review complete. Implementation has not started.**
-> The design is documented below and awaiting sign-off on the open questions in
-> [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) §5.
+> **Status: all nine phases complete.** 607 tests, typecheck, bundle budget and production build
+> clean; every phase verified end-to-end in a real browser.
+> [`QA_CHECKLIST.md`](./QA_CHECKLIST.md) is the manual pass.
 
 ## What this is
 
 Character creation, a live play dashboard, inventory, spellbook, leveling, a public/private
 campaign journal, linked campaign notes, and character portraits/sprites with an emote system.
 Local-first, offline-capable, mobile- and table-friendly.
+
+Everything is stored in the browser on your device. There is no account, no server and nothing is
+uploaded; export/import is the backup and transfer route.
 
 ## Documentation
 
@@ -23,7 +26,8 @@ These documents are the source of truth and are maintained as development procee
 | [`DATA_MODEL.md`](./DATA_MODEL.md) | Entities, persistence layout, the rules/character/custom split |
 | [`RULES_ENGINE.md`](./RULES_ENGINE.md) | Derived stats, the effects layer, calculation order, testing |
 | [`API_INTEGRATION.md`](./API_INTEGRATION.md) | API evaluation, licensing limits, data-integrity findings |
-| [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) | Phases, assumptions, risks, open questions |
+| [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) | Phases, assumptions, risks, what each phase found |
+| [`QA_CHECKLIST.md`](./QA_CHECKLIST.md) | Manual test pass, and the known limits that are not bugs |
 
 ## Three findings that shaped the design
 
@@ -67,7 +71,50 @@ Zod · Tailwind + design tokens · Vitest. Rationale in [`ARCHITECTURE.md`](./AR
 
 ## Getting started
 
-Not yet applicable — implementation begins at Phase 0. Setup instructions will land with it.
+```bash
+npm install
+npm run dev        # development server
+npm test           # 607 tests
+npm run build      # typecheck, production build, bundle budget
+npm run preview    # serve the production build
+```
+
+No API keys and no network access are needed: the SRD dataset is vendored into the repo, so the
+app builds and runs entirely offline.
+
+### Scripts
+
+| Script | What it does |
+|---|---|
+| `npm run dev` | Vite dev server |
+| `npm test` | Vitest, including engine tests against the real SRD tables |
+| `npm run typecheck` | `tsc`, strict, with `noUncheckedIndexedAccess` |
+| `npm run build` | Typecheck → production build → bundle budget (fails if a chunk is over) |
+| `npm run bundle` | Bundle budget report on the current `dist/` |
+| `npm run validate:rules` | Validates all 25 vendored SRD collections against their schemas |
+| `npm run build:single` | One self-contained HTML file in `dist-single/` — see below |
+
+### The single-file build
+
+`npm run build:single` inlines the code, the styles and the entire SRD dataset into one ~3.5 MB
+HTML file that runs from any static host or straight off a filesystem, with no server. It routes
+on the hash so deep links and refreshes work without rewrite rules. It is for handing someone a
+link to try; `npm run build` remains the real build — the single-file one gives up code splitting,
+which is what the bundle budget exists to protect.
+
+## Performance
+
+First load is **113 kB gzip** (entry + CSS). Every route past the gallery is code-split; the
+largest tab chunk is 6 kB. The SRD dataset is 25 separate chunks fetched per collection on demand,
+so opening a character never downloads the monster manual. Budgets are enforced by
+`scripts/check-bundle.mjs`, which fails the build.
+
+## Accessibility
+
+Audited with axe-core across 14 routes × 3 viewports × both themes, plus keyboard checks, on every
+build of Phase 9. Zero violations at WCAG 2.1 AA. Beyond the automated pass: a skip link, focus
+moved to the content region on every client-side navigation, 44px touch targets, state carried by
+text as well as colour, and `prefers-reduced-motion` honoured live rather than sampled at mount.
 
 ## Legal
 

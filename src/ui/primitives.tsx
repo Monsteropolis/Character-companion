@@ -40,12 +40,20 @@ export function Panel({
   children,
   className = '',
   as: Tag = 'div',
+  role,
+  'aria-label': ariaLabel,
 }: {
   children: ReactNode;
   className?: string;
   as?: 'div' | 'section' | 'article' | 'aside';
+  role?: string;
+  'aria-label'?: string;
 }) {
-  return <Tag className={`panel ${className}`}>{children}</Tag>;
+  return (
+    <Tag className={`panel ${className}`} role={role} aria-label={ariaLabel}>
+      {children}
+    </Tag>
+  );
 }
 
 /**
@@ -97,7 +105,9 @@ export function ErrorNotice({
   onRetry?: () => void;
 }) {
   return (
-    <Panel className="mx-auto my-8 max-w-lg p-6">
+    // Announced: this appears after something has already failed, and a screen-reader user gets
+    // no other signal that the view they asked for is not the view they got.
+    <Panel role="alert" className="mx-auto my-8 max-w-lg p-6">
       <h2 className="display-face mb-2 text-lg font-semibold text-[var(--danger)]">{title}</h2>
       <p className="mb-4 text-sm text-[var(--text-muted)]">{message}</p>
       {onRetry ? (

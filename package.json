@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node scripts/check-bundle.mjs",
     "preview": "vite preview",
     "typecheck": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "validate:rules": "vitest run src/rules/__tests__/dataset.integrity.test.ts"
+    "validate:rules": "vitest run src/rules/__tests__/dataset.integrity.test.ts",
+    "bundle": "node scripts/check-bundle.mjs",
+    "build:single": "vite build --config vite.config.single.ts && node scripts/make-artifact.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

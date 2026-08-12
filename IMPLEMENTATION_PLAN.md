@@ -2,7 +2,7 @@
 
 **Living document.** Updated as phases complete. Last updated: 2026-08-12.
 
-Current status: **Phases 0–8 complete. Phase 9 (polish) is next.**
+Current status: **All nine phases complete.** See `QA_CHECKLIST.md` for a manual test pass.
 
 | Phase | State |
 |---|---|
@@ -15,9 +15,9 @@ Current status: **Phases 0–8 complete. Phase 9 (polish) is next.**
 | 6 — Journal & notes | ✅ complete |
 | 7 — Portraits & emotes | ✅ complete |
 | 8 — Leveling | ✅ complete |
-| 9 — Polish | ⬜ next |
+| 9 — Polish | ✅ complete |
 
-594 tests passing; typecheck and production build clean. Every phase so far
+607 tests passing; typecheck, bundle budget and production build clean. Every phase so far
 verified end-to-end in a real browser.
 
 ## 1. Deviations from the suggested build order
@@ -255,10 +255,45 @@ regression tests at the jsdom level.
 stays pure and deterministic per `RULES_ENGINE.md` §1; `rollDie` takes an injectable generator so
 tests can seed it, and `rollAbilityScore` now goes through it too.
 
-### Phase 9 — Polish
-- Responsive/touch passes on phone, tablet, desktop; table-usable contrast and hit targets.
-- Accessibility audit; performance (virtualized lists, memoized derivation, bundle budget).
-- Error/offline states; empty states; onboarding.
+### Phase 9 — Polish ✅
+- ✅ **Code splitting.** Every route past the gallery and the character shell is lazily loaded.
+  First load went from 210 kB to **113 kB gzip** (entry + CSS); the largest tab chunk is 6 kB. A
+  phone on bad wifi no longer downloads the homebrew authoring form to check its AC.
+- ✅ **A bundle budget that fails the build** (`scripts/check-bundle.mjs`, wired into `npm run
+  build`), with a separate allowance per chunk kind: entry, CSS, route, shared, dataset. Budgets
+  are gzip, because that is what ships.
+- ✅ **Long lists render in slices** (`ui/IncrementalList`) and say how much is left. The spell
+  browser was rendering all 319 cards at once. Deliberately not a virtualiser: the cards expand
+  in place, and windowing by absolute position fights variable heights. The equipment search no
+  longer truncates silently at 40 results — the count is stated and the rest is one tap away.
+- ✅ **Accessibility audit with axe-core** over 14 routes × 3 viewports × both themes, plus
+  keyboard checks. Fixed: a skip link (first tab stop), focus moving to the content region on
+  every client-side navigation, and the coin fields sized as touch targets with a numeric keypad.
+- ✅ **Offline is a stated condition, not a failure.** A banner says everything still works,
+  because it does — rules are bundled and every write is local.
+- ✅ **The error boundary is keyed on the route**, so a crash on one tab no longer blocks the rest.
+- ✅ **Desktop gets its two columns** from 1024px: the play bar docks as a right rail while the
+  reference material takes the width. The play bar leads the DOM order regardless, which is the
+  right reading order on a phone.
+- ✅ **First-run orientation** states the three things that surprise people — data is local, the
+  SRD is a subset, and homebrew fills the gap — and stays dismissed.
+- ✅ `QA_CHECKLIST.md`: a manual pass covering every feature, with the known limits separated from
+  the bugs so a tester is not reporting the SRD licence as a defect.
+
+**Found while building:** axe caught two real defects that reading the code would not have.
+`role="status"` on a `<ul>` replaces its list role and orphans every `<li>` from assistive
+technology — the level-up validation messages were affected, and the live region is now the
+wrapper. The five coin inputs were 28px tall with no `inputMode`, which is a display, not
+something you edit on a phone mid-session.
+
+One finding was a defect in the harness rather than the app, and worth recording because it looked
+exactly like a real one. A dark-mode contrast violation of **1.04:1** kept appearing on a single
+button. Measuring the actual computed colours across the theme flip showed why: the audit switched
+themes by setting `data-theme` on a live page, which starts a `transition-colors` on every themed
+element, and axe was sampling the interpolated background against the already-switched text. The
+settled value is 13:1. The audit now loads dark theme in its own context with
+`prefers-color-scheme: dark` — no transition, and it exercises the path a user on a dark-mode
+device actually takes.
 
 ## 3. Assumptions
 

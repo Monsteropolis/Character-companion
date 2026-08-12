@@ -107,8 +107,14 @@ Damage and healing therefore cost one tap from anywhere in the app — including
 
 - **Spells** is hidden entirely for non-casters rather than shown empty.
 - **Desktop** ≥1024px: two columns, Play Bar docked as a right rail.
-- **Mobile**: bottom tab bar, Play Bar docked directly above it, thumb-reachable.
+- **Mobile**: the Play Bar sticks below the masthead and the tab strip scrolls horizontally.
+  *This is a deviation from the plan, which called for a bottom tab bar.* With ten sections a
+  bottom bar would scroll horizontally too — the same gesture, lower on the screen, and costing
+  the vertical space the Play Bar needs. The actions that matter every round are in the Play Bar
+  itself, which is what had to stay reachable; switching tabs is not a per-round action.
 - Tab state is URL-driven so a browser back button behaves and views are linkable.
+- Route content is code-split; the shell and gallery are not. Navigation moves focus to `<main>`,
+  and the error boundary is keyed on the path so one broken route cannot block the others.
 
 ## 6. Cloud-sync readiness (built for, not built now)
 
