@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCollections } from '../../rules/RulesProvider';
 import {
   characters as characterRepo,
@@ -71,9 +71,18 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
     'skills', 'levels', 'features', 'traits',
   ]);
 
+  /**
+   * A refresh keeps the current view on screen.
+   *
+   * Only the first load shows the spinner. Blanking the sheet whenever something is saved
+   * unmounts the tab, taking its state with it -- a level-up confirmation, a half-written form,
+   * the scroll position -- and flashes at the table for no benefit.
+   */
+  const loadedOnce = useRef(false);
+
   const load = useCallback(async () => {
     if (!characterId) return;
-    setLoading(true);
+    if (!loadedOnce.current) setLoading(true);
     try {
       const found = await characterRepo.get(characterId);
       if (!found) {
@@ -96,11 +105,14 @@ export function useCharacterSheet(characterId: string | undefined): CharacterShe
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load this character.');
     } finally {
+      loadedOnce.current = true;
       setLoading(false);
     }
   }, [characterId]);
 
   useEffect(() => {
+    // A different character is a first load again, spinner and all.
+    loadedOnce.current = false;
     void load();
   }, [load]);
 

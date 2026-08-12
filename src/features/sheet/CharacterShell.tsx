@@ -22,6 +22,7 @@ const TABS = [
   { to: 'journal', label: 'Journal' },
   { to: 'notes', label: 'Notes' },
   { to: 'portrait', label: 'Portrait' },
+  { to: 'level-up', label: 'Level up' },
 ] as const;
 
 /**

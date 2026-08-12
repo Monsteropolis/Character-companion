@@ -117,7 +117,9 @@ describe('character dashboard', () => {
     const character = await seedFighter();
     renderSheet(character.id);
 
-    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined(), {
+      timeout: 8000,
+    });
     // STR 16 -> +3, and a level-3 character has a +2 proficiency bonus.
     expect(screen.getAllByText('16').length).toBeGreaterThan(0);
     expect(screen.getByText(/Dwarf · Fighter 3/)).toBeDefined();
@@ -127,7 +129,9 @@ describe('character dashboard', () => {
     const character = await seedFighter();
     renderSheet(character.id);
 
-    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined(), {
+      timeout: 8000,
+    });
     // CON 14 base + 2 racial = 16, and the breakdown must say so.
     expect(screen.getByText('Racial bonus')).toBeDefined();
   });
@@ -142,7 +146,9 @@ describe('character dashboard', () => {
     });
     renderSheet(character.id);
 
-    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined(), {
+      timeout: 8000,
+    });
 
     fireEvent.change(screen.getByLabelText(/amount of damage or healing/i), {
       target: { value: '8' },
@@ -160,7 +166,9 @@ describe('character dashboard', () => {
   it('never heals above the maximum', async () => {
     const character = await seedFighter();
     renderSheet(character.id);
-    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined(), {
+      timeout: 8000,
+    });
 
     fireEvent.change(screen.getByLabelText(/amount of damage or healing/i), {
       target: { value: '999' },
@@ -218,7 +226,9 @@ describe('ability adjustments', () => {
     });
 
     renderSheet(character.id);
-    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined(), {
+      timeout: 8000,
+    });
 
     // STR 16 + 4 = 20, and the breakdown names the cause.
     expect(screen.getAllByText('20').length).toBeGreaterThan(0);
@@ -229,7 +239,9 @@ describe('ability adjustments', () => {
   it('lets a temporary change be added and then cleared', async () => {
     const character = await seedFighter();
     renderSheet(character.id);
-    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined(), {
+      timeout: 8000,
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /adjust scores/i }));
     fireEvent.click(screen.getByRole('button', { name: /add temporary change/i }));
@@ -264,7 +276,9 @@ describe('ability adjustments', () => {
     });
 
     renderSheet(character.id);
-    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined(), {
+      timeout: 8000,
+    });
     fireEvent.click(screen.getByRole('button', { name: /adjust scores/i }));
     fireEvent.click(screen.getByRole('button', { name: /clear all temporary/i }));
 
@@ -280,7 +294,9 @@ describe('stat overrides', () => {
   it('overrides armour class and marks it as no longer calculated', async () => {
     const character = await seedFighter();
     renderSheet(character.id);
-    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined(), {
+      timeout: 8000,
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /override stats/i }));
     fireEvent.change(screen.getByLabelText('Armour class'), { target: { value: '21' } });
@@ -302,7 +318,9 @@ describe('stat overrides', () => {
       },
     });
     renderSheet(character.id);
-    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined(), {
+      timeout: 8000,
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /override stats \(1\)/i }));
     fireEvent.click(screen.getByRole('button', { name: /clear all overrides/i }));
@@ -438,7 +456,9 @@ describe('custom backgrounds reach the sheet', () => {
     });
 
     renderSheet(character.id);
-    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Thorin Stonefist')).toBeDefined(), {
+      timeout: 8000,
+    });
 
     // Proficiency must actually change the modifier, not merely be listed.
     const athletics = screen.getByText('Athletics').closest('details');

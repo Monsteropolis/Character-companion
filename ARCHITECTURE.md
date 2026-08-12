@@ -55,6 +55,7 @@ src/
   engine/         # PURE rules engine. No React, no I/O, no persistence.
     effects/      #   hand-authored machine-readable riders for prose features
     derive/       #   deriveCharacter() and its contributors
+    dice.ts       #   the one exception: randomness, with an injectable generator
   domain/         # entity types, factories, invariants, schema migrations
   persistence/    # Dexie schema, repositories, import/export, migration runner
   features/       # vertical slices: creation, sheet, inventory, spellbook,
@@ -99,7 +100,7 @@ Damage and healing therefore cost one tap from anywhere in the app — including
 /create                 creation wizard (step routes, resumable)
 /c/:id                  character shell  ── Play Bar + tabs
       /overview  /combat  /abilities  /spells  /inventory  /journal  /notes
-/c/:id/level-up         level-up flow (modal route)
+      /portrait  /level-up
 /custom                 homebrew content manager
 /settings
 ```

@@ -410,12 +410,24 @@ export type EmotePresentation =
   | { type: 'pulse'; params: Record<string, number | string> }
   | { type: 'tint'; params: Record<string, number | string> };
 
+/**
+ * A committed level, recorded so it can be undone.
+ *
+ * Everything the level changed is stated explicitly rather than inferred, because undo that has
+ * to guess what it applied is undo that eventually corrupts a character.
+ */
 export interface LevelUpRecord extends Persisted {
   characterId: string;
   classIndex: string;
   level: number;
   hpGained: number;
   hpMethod: 'roll' | 'average' | 'manual';
+  /** The raw die result before the CON modifier, so the roll survives a CON change. */
+  hpRoll: number;
+  /** Ability increases applied by an ASI at this level. */
+  abilityIncreases: { ability: AbilityId; amount: number }[];
+  /** True when this level created the class entry, so undo removes the class. */
+  createdClass: boolean;
   choices: ChoiceRecord[];
 }
 

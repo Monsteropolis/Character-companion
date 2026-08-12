@@ -13,6 +13,7 @@ import { SpellsTab } from '../features/spells/SpellsTab';
 import { JournalTab } from '../features/journal/JournalTab';
 import { NotesTab } from '../features/notes/NotesTab';
 import { PortraitTab } from '../features/portraits/PortraitTab';
+import { LevelUpTab } from '../features/leveling/LevelUpTab';
 
 /**
  * Route table.
@@ -52,6 +53,7 @@ export const router = createBrowserRouter([
           { path: 'journal', element: <JournalTab /> },
           { path: 'notes', element: <NotesTab /> },
           { path: 'portrait', element: <PortraitTab /> },
+          { path: 'level-up', element: <LevelUpTab /> },
         ],
       },
       {

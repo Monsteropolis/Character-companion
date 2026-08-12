@@ -1,6 +1,7 @@
 import type { AbilityId } from '../rules/schemas/primitives';
 import type { AbilityAdjustment, AbilityScoreBlock, AbilityScoreMethod } from '../domain/types';
 import { ABILITY_IDS, clampScore } from './core';
+import { rollDice } from './dice';
 
 /**
  * Ability score generation.
@@ -97,9 +98,9 @@ export function validateAbilityScores(
   return issues;
 }
 
-/** 4d6-drop-lowest, the standard rolling method. Randomness lives here, never in the engine. */
+/** 4d6-drop-lowest, the standard rolling method. Randomness comes from `dice.ts`, nowhere else. */
 export function rollAbilityScore(random: () => number = Math.random): number {
-  const dice = Array.from({ length: 4 }, () => Math.floor(random() * 6) + 1);
+  const dice = rollDice(4, 6, random);
   dice.sort((a, b) => a - b);
   return dice[1]! + dice[2]! + dice[3]!;
 }

@@ -2,7 +2,7 @@
 
 **Living document.** Updated as phases complete. Last updated: 2026-08-12.
 
-Current status: **Phases 0–7 complete. Phase 8 (leveling) is next.**
+Current status: **Phases 0–8 complete. Phase 9 (polish) is next.**
 
 | Phase | State |
 |---|---|
@@ -14,10 +14,10 @@ Current status: **Phases 0–7 complete. Phase 8 (leveling) is next.**
 | 5 — Abilities & spellcasting | ✅ complete |
 | 6 — Journal & notes | ✅ complete |
 | 7 — Portraits & emotes | ✅ complete |
-| 8 — Leveling | ⬜ next |
-| 9 — Polish | ⬜ |
+| 8 — Leveling | ✅ complete |
+| 9 — Polish | ⬜ next |
 
-548 tests passing; typecheck and production build clean. Every phase so far
+594 tests passing; typecheck and production build clean. Every phase so far
 verified end-to-end in a real browser.
 
 ## 1. Deviations from the suggested build order
@@ -214,10 +214,46 @@ sprite art takes exactly the same route.
 clone, so byte-level assertions run against the value `importImage` returns rather than a stored
 round trip. Real IndexedDB stores Blobs natively; the browser pass covers the stored bytes.
 
-### Phase 8 — Leveling
-- `levelUpPlan` flow: HP mode, ASI vs feat, subclass at the right level, new spells, expertise.
-- `LevelUpRecord` history; reversible; nothing committed until confirmed.
-- **Exit:** a character advances 1→5 with every choice explicit and auditable.
+### Phase 8 — Leveling ✅
+- ✅ **Two-phase transaction.** `levelUpPlan` is pure and mutates nothing: it reads the SRD level
+  table and reports what the level would do — hit points, proficiency bonus, new features with
+  their text, slot changes, cantrips and spells known. `applyLevelUp` then commits, and
+  `revertLevelUp` takes it back. Nothing is written until Confirm is pressed.
+- ✅ **ASI levels come from the data, not a table.** `ability_score_bonuses` on the level rows is
+  cumulative, so a level grants an ASI when its value exceeds the previous level's. That yields
+  the published levels for every class — fighter `[4,6,8,12,14,16,19]`, rogue `[4,8,10,12,16,19]`,
+  wizard `[4,8,12,16,19]` — and picks up homebrew classes for free.
+- ✅ **Subclass level is derived too**, as the lowest level at which any subclass feature for that
+  class appears: Cleric at 1, Warlock at 1, Fighter at 3, with no table to maintain.
+- ✅ **Nothing is preselected.** An ASI level offers neither the ability path nor the feat path
+  until one is chosen, and the level cannot be confirmed until 2 points are distributed. The
+  brief's "never silently makes irreversible choices" is enforced by the validator, not by copy.
+- ✅ **Multiclassing is warned about, never blocked.** Unmet prerequisites say exactly what is
+  short ("normally requires CHA 13; this character has 10") and the level still commits, because
+  the DM may have ruled otherwise.
+- ✅ **Undo is a first-class action.** Each commit writes a `LevelUpRecord` stating the hit points,
+  the ability increases, the choices made, and whether the level created the class. Undo reads the
+  record rather than inferring anything, so a first level in a multiclass removes the class again.
+- **Exit met:** verified in a browser, advancing a fighter 1→4 — hit points rolled and applied, a
+  subclass demanded at 3, an ASI demanded at 4, then undone back to 3 with the ability layer gone.
+
+**Found while building:** four bugs. Two in the engine: `revertLevelUp` originally inferred the
+ability increase from a choice record that `applyLevelUp` never wrote, so an undone ASI stayed on
+the sheet — the record now states the increases explicitly; and undo floored current HP at 1,
+quietly reviving a character who had levelled up while at 0, which now floors at 0 since 0 is a
+real state here (death saves).
+
+Two more the browser pass caught that jsdom could not. **Every save blanked the sheet to a
+spinner**, because `reload()` set the shared loading flag and the shell unmounted the whole tab
+tree — taking the level-up confirmation, and any half-filled form on any other tab, with it. Only
+a first load spins now; a refresh keeps the current view on screen. And committing a level left
+the panel blank until the class picker was touched: `commit()` cleared the choices *after* the
+reload had already seeded fresh ones for the next level, so the clear landed last. Both now have
+regression tests at the jsdom level.
+
+**Where randomness lives:** `src/engine/dice.ts`, and nowhere else. Everything else in `engine/`
+stays pure and deterministic per `RULES_ENGINE.md` §1; `rollDie` takes an injectable generator so
+tests can seed it, and `rollAbilityScore` now goes through it too.
 
 ### Phase 9 — Polish
 - Responsive/touch passes on phone, tablet, desktop; table-usable contrast and hit targets.
